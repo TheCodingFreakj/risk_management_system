@@ -1,0 +1,11 @@
+Django>=3.2,<4.0
+djangorestframework
+psycopg2-binary
+kafka-python
+line_profiler
+httpx
+python-dotenv
+django-channels 
+channels_redis
+tenacity
+apscheduler

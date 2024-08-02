@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        #quotes, div {
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 600px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        p {
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        p span {
+            font-weight: bold;
+            color: #000;
+        }
+
+        button {
+            display: block;
+            margin: 10px auto;
+            padding: 10px 20px;
+            font-size: 1em;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div id="quotes"></div>
+    <button onclick="connectWebSocket()">Connect WebSocket</button>
+    
+
+    <div>
+        <h2>Stock Data</h2>
+        <p>Current Price: <span id="close"></span></p>
+        <p>Change: <span id="change"></span></p>
+        <p>Change Percent: <span id="changePercent"></span></p>
+        <p>High Price of the Day: <span id="high"></span></p>
+        <p>Low Price of the Day: <span id="low"></span></p>
+        <p>Open Price of the Day: <span id="open"></span></p>
+        <p>Previous Close Price: <span id="previousClose"></span></p>
+        <p>Timestamp: <span id="timestamp"></span></p>
+    </div>
+
+    <script>
+        function connectWebSocket() {
+            var socket = new WebSocket('ws://' + window.location.host + '/ws/quotes/');
+
+            socket.onmessage = function(e) {
+                var data = JSON.parse(e.data);
+
+                console.log(data)
+
+                data = data.quote
+                
+                document.getElementById('close').innerText = data.c;
+                document.getElementById('change').innerText = data.d;
+                document.getElementById('changePercent').innerText = data.dp;
+                document.getElementById('high').innerText = data.h;
+                document.getElementById('low').innerText = data.l;
+                document.getElementById('open').innerText = data.o;
+                document.getElementById('previousClose').innerText = data.pc;
+                document.getElementById('timestamp').innerText = new Date(data.t * 1000).toLocaleString();
+            };
+
+            socket.onclose = function(e) {
+                console.error('WebSocket closed unexpectedly');
+            };
+
+            socket.onopen = function(e) {
+                console.log('WebSocket connection opened');
+            };
+
+            socket.onerror = function(e) {
+                console.error('WebSocket error:', e);
+            };
+        }
+
+      
+    </script>
+</body>
+</html>

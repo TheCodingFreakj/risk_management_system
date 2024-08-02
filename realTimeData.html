@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div id="quotes"></div>
+    <button onclick="connect()">Connect</button>
+    <script>
+        function connect() {
+            var socket = new WebSocket('ws://' + window.location.host + '/sockets/ws/quotes/');
+
+            socket.onmessage = function(e) {
+                var data = JSON.parse(e.data);
+                var quotesDiv = document.getElementById('quotes');
+                var newQuote = document.createElement('div');
+                newQuote.innerText = data.quote;
+                quotesDiv.appendChild(newQuote);
+            };
+
+            socket.onclose = function(e) {
+                console.error('WebSocket closed unexpectedly');
+            };
+
+            socket.onopen = function(e) {
+                console.log('WebSocket connection opened');
+            };
+        }
+    </script>
+</body>
+</html>

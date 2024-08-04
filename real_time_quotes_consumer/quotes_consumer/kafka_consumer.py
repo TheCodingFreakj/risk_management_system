@@ -35,10 +35,11 @@ class KafkaConsumerService:
         self.message_processed = False
 
     def consume_messages(self):
-        logger.info(f"Starting to consume messages using SSL")
+        
         
         while True:
             current_time = time.time()
+            logger.info(f"Starting to consume messages using SSL----> {current_time - self.start_time}")
             
             # Re-seek to the latest 5 minutes messages if timeout occurs
             if current_time - self.start_time >= self.timeout_seconds:
@@ -47,28 +48,35 @@ class KafkaConsumerService:
             new_messages = []
            
             logger.info(f"Starting to consume messages using SSL---> {self.message_processed}")   
+
+            
+
+            
+            for message in self.consumer:
+                message_timestamp = datetime.fromtimestamp(message.timestamp / 1000)  # Convert milliseconds to seconds
+                if self.is_last_five_minutes(message_timestamp):
+                    logger.info(f"Processing Message------->: {message}")
+                    logger.info(f"Processing message_timestamp------->: {message_timestamp}")
+                    self.process_message(message.value)
+                    new_messages.append((message.value, datetime.now()))  # Add message with reception time
+                    self.consumer.commit()
+                    logger.info(f"Commiting Messages------->{new_messages}")
+                    self.message_processed = True
+                    logger.info(f"Updating Messages and inserting to cache------->")
+                    self.update_cache(new_messages)
+                time.sleep(5)
+                logger.info(f"Not last minute message------->")
+                break
+
+            logger.info(f"Coming out of the self.consumer loop------->")
             if self.message_processed == True and self.cached_messages:
                 # Process cached messages if no new message was processed
                 logger.info("No new messages received. Reprocessing cached messages.")
                 for cached_message, _ in self.cached_messages:
                     self.process_message(cached_message)
-            time.sleep(self.fetch_delay_seconds)  
-            self.update_cache(new_messages)
+                self.message_processed = False    
+   
 
-            
-            for message in self.consumer:
-                message_timestamp = datetime.fromtimestamp(message.timestamp / 1000)  # Convert milliseconds to seconds
-                logger.info(f"Received Message: {message}")
-                if self.is_last_five_minutes(message_timestamp):
-                    logger.info(f"Processing Message: {message}")
-                    self.process_message(message.value, new_messages)
-                    new_messages.append((message.value, datetime.now()))  # Add message with reception time
-                    # Commit the offset after processing
-                    self.consumer.commit()
-                    self.message_processed = True
-                    # Update the cache with the latest 5 minutes of messages
-                    self.update_cache(new_messages)
-                time.sleep(self.fetch_delay_seconds)
 
 
 
@@ -95,7 +103,7 @@ class KafkaConsumerService:
         five_minutes_ago = current_time - timedelta(minutes=5)
         return message_timestamp >= five_minutes_ago
     
-    def process_message(self, message, new_messages):
+    def process_message(self, message):
         logger.debug(f"Processing Message: {message}")
         try:
             # Get the channel layer
@@ -113,11 +121,8 @@ class KafkaConsumerService:
 
             logger.debug(f"Message sent to WebSocket: {message}")
             logger.info(f"Starting to consume messages using SSL---> {self.message_processed}")   
-            # Update the cache with the latest 5 minutes of messages
-            self.update_cache(new_messages)
-                
-            time.sleep(self.fetch_delay_seconds) 
-
+          
+            time.sleep(5)
         except json.JSONDecodeError as e:
             logger.error(f"Failed to decode message: {e}")
         except Exception as e:
@@ -136,20 +141,20 @@ class KafkaConsumerService:
         except Exception as e:
             logger.error(f"Error resetting offset: {e}")
 
-    def set_retention_policy(self, retention_ms=3600000):
-        """
-        Set the retention policy for the Kafka topic to delete messages older than the specified time.
-        """
-        try:
-            admin_client = KafkaAdminClient(
-                bootstrap_servers=settings.KAFKA_BROKER_URLS,
-                client_id='retention_policy_client'
-            )
+    # def set_retention_policy(self, retention_ms=3600000):
+    #     """
+    #     Set the retention policy for the Kafka topic to delete messages older than the specified time.
+    #     """
+    #     try:
+    #         admin_client = KafkaAdminClient(
+    #             bootstrap_servers=settings.KAFKA_BROKER_URLS,
+    #             client_id='retention_policy_client'
+    #         )
             
-            config_resource = ConfigResource(ConfigResourceType.TOPIC, self.topic)
-            configs = {'retention.ms': retention_ms}
+    #         config_resource = ConfigResource(ConfigResourceType.TOPIC, self.topic)
+    #         configs = {'retention.ms': retention_ms}
 
-            admin_client.alter_configs({config_resource: configs})
-            logger.info(f"Retention policy set for topic {self.topic}.")
-        except Exception as e:
-            logger.error(f"Failed to set retention policy: {e}")
+    #         admin_client.alter_configs({config_resource: configs})
+    #         logger.info(f"Retention policy set for topic {self.topic}.")
+    #     except Exception as e:
+    #         logger.error(f"Failed to set retention policy: {e}")

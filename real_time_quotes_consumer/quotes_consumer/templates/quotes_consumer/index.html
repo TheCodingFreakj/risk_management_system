@@ -88,6 +88,7 @@
             <p>Low Price of the Day: <span id="low"></span></p>
             <p>Open Price of the Day: <span id="open"></span></p>
             <p>Previous Close Price: <span id="previousClose"></span></p>
+            <button >Signal: <span id="signalValue"></span></button>
         </div>
 <!-- 
         <div class="stock-data-1">
@@ -108,6 +109,8 @@
                 var data = JSON.parse(e.data);
 
                 console.log(data)
+                document.getElementById('signalValue').innerText = data.quote.signal|| '-';
+            
                 document.getElementById('symbol').innerText = data.quote.symbol || '-';
                 document.getElementById('close').innerText = data.quote.data.currentPrice|| '-';
                 document.getElementById('high').innerText = data.quote.data.dayHigh|| '-';

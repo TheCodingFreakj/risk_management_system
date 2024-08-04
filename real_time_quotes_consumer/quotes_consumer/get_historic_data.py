@@ -19,8 +19,7 @@ def fetch_historical_data(symbols, api_key):
             return None
 
 
-def fetch_historic_data(symbols):
-    for symbol in symbols:
+def fetch_historic_data(symbol):
         stock = yf.Ticker(symbol)
         data = stock.history(period="1y")
         data['symbol'] = symbol

@@ -15,20 +15,22 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Scheduler started'))
         VANTAGE_API_KEY = os.getenv('VANTAGE_API_KEY', 'your_finnhub_api_key')
         USA_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
-        SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA','HSBA.L', 'BARC.L', 'VOD.L', 'BP.L', 'RDSA.L']
+        SYMBOLS = ['GOOGL', 'AMZN', 'TSLA','HSBA.L', 'BARC.L', 'VOD.L', 'BP.L', 'RDSA.L']
         # usa_historic_data = fetch_historical_data(USA_SYMBOLS, VANTAGE_API_KEY)
         # uk_historic_data = fetch_historical_data(UK_SYMBOLS, VANTAGE_API_KEY)
 
-        uk_data = fetch_historic_data(SYMBOLS)
-        # us_data = fetch_historic_data(USA_SYMBOLS)
-        logger.debug(f"The historic data total_historical_data -----------------> {uk_data}")
-        logger.debug(f"The historic data total_historical_data -----------------> {us_data}")
 
-        if(uk_data.empty):
-            return
-            
-        else:
-            self.insert_to_db_Yfinance(uk_data)
+        for symbol in SYMBOLS:
+            stock_data = fetch_historic_data(symbol)
+            # us_data = fetch_historic_data(USA_SYMBOLS)
+            logger.debug(f"The historic data total_historical_data -----------------> {stock_data}")
+            # logger.debug(f"The historic data total_historical_data -----------------> {us_data}")
+
+            if(stock_data.empty):
+                return
+                
+            else:
+                self.insert_to_db_Yfinance(stock_data)
 
 
            

@@ -3,6 +3,10 @@ from kafka.admin import ConfigResource, ConfigResourceType
 from django.conf import settings
 import ssl
 import json
+
+import pandas as pd
+
+from .models import StockPrice
 from .loggin_config import logger
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -33,7 +37,40 @@ class KafkaConsumerService:
         self.fetch_delay_seconds = fetch_delay_seconds
         self.cached_messages = []
         self.message_processed = False
+    def calculate_signal(self,message,current_price):
 
+        historical_data_df=self.compareWithCurrentPrice(message)
+                # Check if the DataFrame is empty
+        if historical_data_df.empty:
+            logger.warning(f"No historical data found for symbol: {message}. Skipping processing.")
+            return
+        
+        logger.debug(f"historical_data_df: {historical_data_df}")
+        # Assuming message["data"]["currentPrice"] should be a dictionary
+        current_price_data = int(current_price)
+        if isinstance(current_price_data, tuple):
+            current_price_data = dict(current_price_data)  # Convert to dictionary if it's a tuple
+
+        # Create a DataFrame for the current price
+        current_price_df = pd.DataFrame([current_price_data])
+                # Check if the current_price_df is empty
+        if current_price_df.empty:
+            logger.warning("Current price data is empty. Skipping processing.")
+            return
+        # Concatenate the historical data with the current price
+        current_data = pd.concat([historical_data_df, current_price_df], ignore_index=True)
+                    # Recalculate indicators with the current price
+        current_data['SMA_20'] = current_data['close_price'].rolling(window=20).mean()
+        current_data['SMA_50'] = current_data['close_price'].rolling(window=50).mean()
+        current_data['RSI_14'] = self.calculate_rsi(current_data, 14)
+        current_data['EMA_12'] = current_data['close_price'].ewm(span=12, adjust=False).mean()
+        current_data['EMA_26'] = current_data['close_price'].ewm(span=26, adjust=False).mean()
+        current_data['MACD'] = current_data['EMA_12'] - current_data['EMA_26']
+        current_data['Signal_Line'] = current_data['MACD'].ewm(span=9, adjust=False).mean()
+        signal = self.generate_signal(current_data)
+        return signal
+         
+            
     def consume_messages(self):
         
         
@@ -46,18 +83,15 @@ class KafkaConsumerService:
                 self.seek_to_latest_five_minutes()
                 self.start_time = current_time
             new_messages = []
-           
             logger.info(f"Starting to consume messages using SSL---> {self.message_processed}")   
-
-            
-
-            
             for message in self.consumer:
                 message_timestamp = datetime.fromtimestamp(message.timestamp / 1000)  # Convert milliseconds to seconds
                 if self.is_last_five_minutes(message_timestamp):
                     logger.info(f"Processing Message------->: {message}")
                     logger.info(f"Processing message_timestamp------->: {message_timestamp}")
-                    self.process_message(message.value)
+                  
+                    signal = self.calculate_signal(message.value['symbol'],message.value["data"]["currentPrice"] )
+                    self.process_message(message.value,signal)
                     new_messages.append((message.value, datetime.now()))  # Add message with reception time
                     self.consumer.commit()
                     logger.info(f"Commiting Messages------->{new_messages}")
@@ -65,7 +99,7 @@ class KafkaConsumerService:
                     logger.info(f"Updating Messages and inserting to cache------->")
                     self.update_cache(new_messages)
                 time.sleep(5)
-                logger.info(f"Not last minute message------->")
+                logger.info(f"Not last minute message------->{self.is_last_five_minutes(message_timestamp)}")
                 break
 
             logger.info(f"Coming out of the self.consumer loop------->")
@@ -73,7 +107,8 @@ class KafkaConsumerService:
                 # Process cached messages if no new message was processed
                 logger.info("No new messages received. Reprocessing cached messages.")
                 for cached_message, _ in self.cached_messages:
-                    self.process_message(cached_message)
+                    signal = self.calculate_signal(cached_message['symbol'],cached_message["data"]["currentPrice"] )
+                    self.process_message(cached_message,signal)
                 self.message_processed = False    
    
 
@@ -103,10 +138,80 @@ class KafkaConsumerService:
         five_minutes_ago = current_time - timedelta(minutes=5)
         return message_timestamp >= five_minutes_ago
     
-    def process_message(self, message):
-        logger.debug(f"Processing Message: {message}")
+
+        # Calculate RSI
+    def calculate_rsi(self, data, window):
+        data['close_price'] = data['close_price'].astype(float)
+        delta = data['close_price'].diff(1)
+        gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        return rsi
+
+    def compareWithCurrentPrice(self,symbol):
+
+        historical_data = StockPrice.objects.filter(symbol=symbol).all()
+                # Check if the QuerySet is empty
+        if not historical_data.exists():
+            logger.warning(f"No historical data found for symbol: {symbol}")
+            return pd.DataFrame() 
+        logger.debug(f"historical_data: {historical_data}")
+        # Convert the ORM query result to a DataFrame
+        historical_data_df = pd.DataFrame([{
+            'date': record.date,
+            'open_price': record.open_price,
+            'high_price': record.high_price,
+            'low_price': record.low_price,
+            'close_price': record.close_price,
+            'volume': record.volume
+        } for record in historical_data])
+        logger.debug(f"historical_data_df: {historical_data_df}")
+                # Convert the date column to datetime format
+        historical_data_df['date'] = pd.to_datetime(historical_data_df['date'])
+
+        # Sort data by date
+        historical_data_df = historical_data_df.sort_values(by='date')
+
+        # Optionally, set the date as the index
+        historical_data_df.set_index('date', inplace=True)
+
+
+                # Calculate Moving Averages
+        historical_data_df['SMA_20'] = historical_data_df['close_price'].rolling(window=20).mean()
+        historical_data_df['SMA_50'] = historical_data_df['close_price'].rolling(window=50).mean()
+
+
+        historical_data_df['RSI_14'] = self.calculate_rsi(historical_data_df, 14)
+
+        # Calculate MACD
+        historical_data_df['EMA_12'] = historical_data_df['close_price'].ewm(span=12, adjust=False).mean()
+        historical_data_df['EMA_26'] = historical_data_df['close_price'].ewm(span=26, adjust=False).mean()
+        historical_data_df['MACD'] = historical_data_df['EMA_12'] - historical_data_df['EMA_26']
+        historical_data_df['Signal_Line'] = historical_data_df['MACD'].ewm(span=9, adjust=False).mean()
+        logger.debug(f"historical_data_df: {historical_data_df}")
+        return historical_data_df
+    
+        # Define a simple moving average crossover strategy
+    def generate_signal(self,data):
+        if data['SMA_20'].iloc[-1] > data['SMA_50'].iloc[-1]:
+            return 'Buy'
+        elif data['SMA_20'].iloc[-1] < data['SMA_50'].iloc[-1]:
+            return 'Sell'
+        else:
+            return 'Hold'
+    def process_message(self, message, signal):
+        logger.debug(f"Processing Message--------------->: {message}")
+        logger.debug(f"Processing Message--------------->: {signal}")
         try:
-            # Get the channel layer
+            message["signal"] = signal
+           
+            
+            logger.info(f"Starting to consume messages using SSL---> {self.message_processed}")   
+
+
+
+             # Get the channel layer
             channel_layer = get_channel_layer()
             logger.debug(f"Channel Layer: {channel_layer}")
 
@@ -118,11 +223,9 @@ class KafkaConsumerService:
                     'quote': message
                 }
             )
-
             logger.debug(f"Message sent to WebSocket: {message}")
-            logger.info(f"Starting to consume messages using SSL---> {self.message_processed}")   
-          
             time.sleep(5)
+            
         except json.JSONDecodeError as e:
             logger.error(f"Failed to decode message: {e}")
         except Exception as e:
@@ -141,20 +244,3 @@ class KafkaConsumerService:
         except Exception as e:
             logger.error(f"Error resetting offset: {e}")
 
-    # def set_retention_policy(self, retention_ms=3600000):
-    #     """
-    #     Set the retention policy for the Kafka topic to delete messages older than the specified time.
-    #     """
-    #     try:
-    #         admin_client = KafkaAdminClient(
-    #             bootstrap_servers=settings.KAFKA_BROKER_URLS,
-    #             client_id='retention_policy_client'
-    #         )
-            
-    #         config_resource = ConfigResource(ConfigResourceType.TOPIC, self.topic)
-    #         configs = {'retention.ms': retention_ms}
-
-    #         admin_client.alter_configs({config_resource: configs})
-    #         logger.info(f"Retention policy set for topic {self.topic}.")
-    #     except Exception as e:
-    #         logger.error(f"Failed to set retention policy: {e}")

@@ -11,6 +11,7 @@ def start_consumer_with_retries():
         try:
             from .kafka_consumer import KafkaConsumerService
             consumer = KafkaConsumerService(settings.KAFKA_TOPIC)
+            # consumer.reset_offset(offset=100)
             consumer.consume_messages()
             break
         except NoBrokersAvailable as e:

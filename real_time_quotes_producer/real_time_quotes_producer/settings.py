@@ -132,6 +132,14 @@ STATIC_URL = 'static/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+KAFKA_BROKER_URLS = ['kafka-22753f33-priyaarshinipallavi-3893.g.aivencloud.com:22587' ] # Example: 'your-service-name.aivencloud.com:12345'
+KAFKA_USERNAME = 'avnadmin'
+KAFKA_PASSWORD = 'AVNS_3pb2ItKZq2fdtsorhKZ'
+KAFKA_TOPIC = 'Real_Time_Quotes_Aggregate'
+KAFKA_CA_CERT = '/app/certs/ca.pem'
+KAFKA_CLIENT_CERT = '/app/certs/service.cert'
+KAFKA_CLIENT_KEY = '/app/certs/service.key'
 
 
 INTERNAL_IPS = [

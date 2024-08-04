@@ -1,49 +1,70 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>WebSocket Test</title>
+    <title>Market Data Handler</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             margin: 0;
             padding: 0;
+            width: 100%;
+
         }
 
-        h1, h2 {
+        h1,
+        h2 {
             text-align: center;
             color: #333;
         }
 
-        #quotes, div {
-            margin: 20px auto;
+        #container{
+            display: flex;
+            flex-direction: column;
+        }
+
+        .flex_container{
+            display: flex;
+            /* justify-content: flex-start; */
+            justify-content: space-between;
+            /* padding: 2%; */
+            padding: 02%;
+            font-size: 10px;
+        }
+        .stock-data {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px;
             padding: 20px;
-            max-width: 600px;
             background: #fff;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
         }
 
-        p {
-            font-size: 1.2em;
-            color: #555;
+        .stock-data {
+            padding: 10px 20px;
         }
 
-        p span {
+        .stock-data p {
+            margin: 5px 0;
+        }
+
+        .stock-data p span {
             font-weight: bold;
             color: #000;
         }
 
         button {
-            display: block;
-            margin: 10px auto;
             padding: 10px 20px;
             font-size: 1em;
             color: #fff;
-            background-color: #007bff;
+            background: black;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
 
         button:hover {
@@ -51,59 +72,63 @@
         }
     </style>
 </head>
-<body>
-    <h1>WebSocket Test</h1>
-    <div id="quotes"></div>
-    <button onclick="connectWebSocket()">Connect WebSocket</button>
-    
 
-    <div>
-        <h2>Stock Data</h2>
-        <p>Current Price: <span id="close"></span></p>
-        <p>Change: <span id="change"></span></p>
-        <p>Change Percent: <span id="changePercent"></span></p>
-        <p>High Price of the Day: <span id="high"></span></p>
-        <p>Low Price of the Day: <span id="low"></span></p>
-        <p>Open Price of the Day: <span id="open"></span></p>
-        <p>Previous Close Price: <span id="previousClose"></span></p>
-        <p>Timestamp: <span id="timestamp"></span></p>
+<body onload="connectWebSocket()">
+    <div id="container">
+
+        <div class="flex_container">        <h1>Market Data Handler</h1>
+            <button onclick="connectWebSocket()">Connect WebSocket</button></div>
+
+
+
+        <div class="stock-data">
+            <h2>Stock Data for <span id="symbol"></span></h2>
+            <p>Current Price: <span id="close"></span></p>
+            <p>High Price of the Day: <span id="high"></span></p>
+            <p>Low Price of the Day: <span id="low"></span></p>
+            <p>Open Price of the Day: <span id="open"></span></p>
+            <p>Previous Close Price: <span id="previousClose"></span></p>
+        </div>
+<!-- 
+        <div class="stock-data-1">
+            <h2>Stock Data for <span id="symbol-2"></span></h2>
+            <p>Current Price: <span id="close-2"></span></p>
+            <p>High Price of the Day: <span id="high-2"></span></p>
+            <p>Low Price of the Day: <span id="low-2"></span></p>
+            <p>Open Price of the Day: <span id="open-2"></span></p>
+            <p>Previous Close Price: <span id="previousClose-2"></span></p>
+        </div> -->
     </div>
 
     <script>
         function connectWebSocket() {
             var socket = new WebSocket('ws://' + window.location.host + '/ws/quotes/');
 
-            socket.onmessage = function(e) {
+            socket.onmessage = function (e) {
                 var data = JSON.parse(e.data);
 
                 console.log(data)
-
-                data = data.quote
-                
-                document.getElementById('close').innerText = data.c;
-                document.getElementById('change').innerText = data.d;
-                document.getElementById('changePercent').innerText = data.dp;
-                document.getElementById('high').innerText = data.h;
-                document.getElementById('low').innerText = data.l;
-                document.getElementById('open').innerText = data.o;
-                document.getElementById('previousClose').innerText = data.pc;
-                document.getElementById('timestamp').innerText = new Date(data.t * 1000).toLocaleString();
+                document.getElementById('symbol').innerText = data.quote.symbol || '-';
+                document.getElementById('close').innerText = data.quote.data.currentPrice|| '-';
+                document.getElementById('high').innerText = data.quote.data.dayHigh|| '-';
+                document.getElementById('low').innerText = data.quote.data.dayLow|| '-';
+                document.getElementById('open').innerText = data.quote.data.open|| '-';
+                document.getElementById('previousClose').innerText = data.quote.data.previousClose|| '-';
             };
 
-            socket.onclose = function(e) {
+            socket.onclose = function (e) {
                 console.error('WebSocket closed unexpectedly');
             };
 
-            socket.onopen = function(e) {
+            socket.onopen = function (e) {
                 console.log('WebSocket connection opened');
             };
 
-            socket.onerror = function(e) {
+            socket.onerror = function (e) {
                 console.error('WebSocket error:', e);
             };
         }
-
-      
     </script>
 </body>
+
 </html>

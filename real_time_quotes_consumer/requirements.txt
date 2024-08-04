@@ -9,3 +9,6 @@ channels
 channels_redis
 daphne
 redis
+requests
+pandas
+yfinance

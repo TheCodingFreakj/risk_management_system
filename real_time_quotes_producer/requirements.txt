@@ -9,3 +9,5 @@ django-channels
 channels_redis
 tenacity
 apscheduler
+pandas
+yfinance

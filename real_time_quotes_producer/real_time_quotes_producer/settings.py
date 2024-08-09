@@ -28,7 +28,10 @@ SECRET_KEY = 'django-insecure-)tw*btiaz$i1z@yy-xzp0a+ngda*tc$mxnj#%3bmdono+oe6eo
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*', 'localhost','real_time_quotes_producer']
+import os
+
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'real_time_quotes_producer').split(',')
+print(ALLOWED_HOSTS)
 
 
 # Application definition
@@ -135,7 +138,7 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-KAFKA_BROKER_URLS = ['kafka-22753f33-priyaarshinipallavi-3893.g.aivencloud.com:22587' ] # Example: 'your-service-name.aivencloud.com:12345'
+KAFKA_BROKER_URLS = ['kafka-11adc40b-priyadarshinipallavi18-93ae.d.aivencloud.com:18381' ] # Example: 'your-service-name.aivencloud.com:12345'
 KAFKA_USERNAME = 'avnadmin'
 KAFKA_PASSWORD = 'AVNS_3pb2ItKZq2fdtsorhKZ'
 KAFKA_TOPIC = 'Real_Time_Quotes_Aggregate'

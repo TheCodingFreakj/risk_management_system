@@ -1,10 +1,14 @@
+from datetime import date, timedelta
 from pathlib import Path
+from django.http import JsonResponse
 import requests
 import os
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.conf import settings
+from django.db.models import Avg, Max, Min
+from .models import DailyReturn, PortfolioReturn, VaR
 from .kafka_producer import KafkaProducerPool  # Import the KafkaProducerPool
 from dotenv import load_dotenv
 import logging
@@ -57,10 +61,69 @@ class StockDataViewSet(viewsets.ViewSet):
                 logger.info(f'Produced data to Kafka for {symbol}: {data}')
             else:
                 logger.error(f'No data to produce to Kafka for {symbol}') 
-        return Response({"status": "Data produced to Kafka successfully"})           
+        return Response({"status": "Data produced to Kafka successfully"})  
 
-        
-        
+
+    # View to retrieve and display daily returns for a specific ticker
+def daily_returns_view(request, ticker):
+    # Retrieve the daily returns for the given ticker
+    daily_returns = DailyReturn.objects.filter(ticker=ticker).order_by('date')
+    
+    # Prepare data for display
+    data = {
+        'ticker': ticker,
+        'returns': list(daily_returns.values('date', 'return_value'))
+    }
+    
+    return JsonResponse(data)
+
+# View to retrieve and display portfolio returns over a date range
+def portfolio_returns_view(request):
+    # Optionally, get the date range from query parameters
+    start_date = request.GET.get('start_date', (date.today() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    end_date = request.GET.get('end_date', date.today().strftime('%Y-%m-%d'))
+    
+    # Retrieve the portfolio returns within the specified date range
+    portfolio_returns = PortfolioReturn.objects.filter(date__range=[start_date, end_date]).order_by('date')
+    
+    # Calculate average, max, and min returns (example aggregate data)
+    avg_return = portfolio_returns.aggregate(Avg('return_value'))['return_value__avg']
+    max_return = portfolio_returns.aggregate(Max('return_value'))['return_value__max']
+    min_return = portfolio_returns.aggregate(Min('return_value'))['return_value__min']
+    
+    # Prepare data for display
+    data = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'returns': list(portfolio_returns.values('date', 'return_value')),
+        'avg_return': avg_return,
+        'max_return': max_return,
+        'min_return': min_return
+    }
+    
+    return JsonResponse(data)
+
+# View to retrieve and display the latest Value-at-Risk (VaR)
+def var_view(request):
+    # Retrieve the most recent VaR entry
+    latest_var = VaR.objects.latest('date')
+    
+    # Prepare data for display
+    data = {
+        'date': latest_var.date,
+        'var_value': latest_var.var_value,
+        'confidence_level': latest_var.confidence_level
+    }
+    
+    return JsonResponse(data)         
+
+
+
+
+
+
+    
+    
 
 
 

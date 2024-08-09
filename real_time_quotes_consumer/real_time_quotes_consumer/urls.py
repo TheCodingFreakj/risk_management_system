@@ -20,6 +20,6 @@ from quotes_consumer.views import index
 urlpatterns = [
     path('admin/', admin.site.urls),
     # path('sockets/', include('quotes_consumer.urls')),
-    path('', index, name='index'),
-    # path('quotes_consumer/', include('quotes_consumer.urls')),
+    # path('', index, name='index'),
+    path('', include('quotes_consumer.urls')),
 ]

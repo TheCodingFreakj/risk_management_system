@@ -2,7 +2,10 @@
 <html>
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Market Data Handler</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -19,12 +22,12 @@
             color: #333;
         }
 
-        #container{
+        #container {
             display: flex;
             flex-direction: column;
         }
 
-        .flex_container{
+        .flex_container {
             display: flex;
             /* justify-content: flex-start; */
             justify-content: space-between;
@@ -32,6 +35,7 @@
             padding: 02%;
             font-size: 10px;
         }
+
         .stock-data {
             display: flex;
             justify-content: space-between;
@@ -70,14 +74,42 @@
         button:hover {
             background-color: #0056b3;
         }
+
+        #chart-container {
+            padding: 1.6%;
+        }
+
+        #graphs {
+            display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Creates exactly three equal-width columns */
+    gap: 20px;
+    /* padding: 20px; */
+}
+
+.grid-item {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.graph-container {
+    margin-bottom: 20px;
+}
+
+h2, h3 {
+    margin-top: 0;
+}
     </style>
 </head>
 
 <body onload="connectWebSocket()">
     <div id="container">
 
-        <div class="flex_container">        <h1>Market Data Handler</h1>
-            <button onclick="connectWebSocket()">Connect WebSocket</button></div>
+        <div class="flex_container">
+            <h1>Market Data Handler</h1>
+            <button onclick="connectWebSocket()">Connect WebSocket</button>
+        </div>
 
 
 
@@ -88,20 +120,54 @@
             <p>Low Price of the Day: <span id="low"></span></p>
             <p>Open Price of the Day: <span id="open"></span></p>
             <p>Previous Close Price: <span id="previousClose"></span></p>
-            <button >Signal: <span id="signalValue"></span></button>
+            <button>Signal: <span id="signalValue"></span></button>
         </div>
-<!-- 
-        <div class="stock-data-1">
-            <h2>Stock Data for <span id="symbol-2"></span></h2>
-            <p>Current Price: <span id="close-2"></span></p>
-            <p>High Price of the Day: <span id="high-2"></span></p>
-            <p>Low Price of the Day: <span id="low-2"></span></p>
-            <p>Open Price of the Day: <span id="open-2"></span></p>
-            <p>Previous Close Price: <span id="previousClose-2"></span></p>
-        </div> -->
-    </div>
+
+        
+
+        </div>
+
+     
+
+            <div id="dynamic_graphs">
+
+                <div id="chart-container">
+                    {{ chart|safe }}
+                </div>
+            </div>
+    
+            <div id="graphs">
+                <!-- Loop through the graphs dictionary and render each ticker's data -->
+                {% for ticker, data in graphs.items %}
+                <div class="grid-item">
+                    <h2>{{ ticker }} Data</h2>
+            
+                    <!-- Daily Returns Graph -->
+                    <div class="graph-container">
+                        <h3>Daily Returns</h3>
+                        {{ data.daily_returns_div|safe }}
+                    </div>
+            
+                    <!-- Portfolio Returns Graph -->
+                    <div class="graph-container">
+                        <h3>Portfolio Returns</h3>
+                        {{ data.portfolio_returns_div|safe }}
+                    </div>
+            
+                    <!-- Value-at-Risk (VaR) -->
+                    <div class="graph-container">
+                        <h3>Value-at-Risk (VaR)</h3>
+                        <p>VaR Value: {{ data.var_value }}, Confidence Level: {{ data.confidence_level }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+
+
 
     <script>
+      
         function connectWebSocket() {
             var socket = new WebSocket('ws://' + window.location.host + '/ws/quotes/');
 
@@ -109,14 +175,19 @@
                 var data = JSON.parse(e.data);
 
                 console.log(data)
-                document.getElementById('signalValue').innerText = data.quote.signal|| '-';
-            
+                document.getElementById('signalValue').innerText = data.quote.signal || '-';
+
                 document.getElementById('symbol').innerText = data.quote.symbol || '-';
-                document.getElementById('close').innerText = data.quote.data.currentPrice|| '-';
-                document.getElementById('high').innerText = data.quote.data.dayHigh|| '-';
-                document.getElementById('low').innerText = data.quote.data.dayLow|| '-';
-                document.getElementById('open').innerText = data.quote.data.open|| '-';
-                document.getElementById('previousClose').innerText = data.quote.data.previousClose|| '-';
+                document.getElementById('close').innerText = data.quote.data.currentPrice || '-';
+                document.getElementById('high').innerText = data.quote.data.dayHigh || '-';
+                document.getElementById('low').innerText = data.quote.data.dayLow || '-';
+                document.getElementById('open').innerText = data.quote.data.open || '-';
+                document.getElementById('previousClose').innerText = data.quote.data.previousClose || '-';
+
+                if (data) {
+                    fetchChartData(data.quote.symbol)
+                    // setInterval(fetchChartData, 2000);
+                }
             };
 
             socket.onclose = function (e) {
@@ -131,6 +202,67 @@
                 console.error('WebSocket error:', e);
             };
         }
+        async function fetchChartData(symbolUpper) {
+            try {
+                const response = await fetch('/chart-data/');
+                if (response.ok) {
+                    const data = await response.json();
+                    const container = document.getElementById('chart-container');
+
+                    // Iterate over all keys in the data object
+                    for (const [symbol, chartHtml] of Object.entries(data)) {
+                        // Show the chart
+                        if (symbolUpper == symbol) {
+
+                            await showChart(container, chartHtml);
+
+                        }
+
+
+                        // // Wait for a specified time before showing the next chart
+                        // await new Promise(resolve => setTimeout(resolve, 5000));  // Display each chart for 5 seconds
+                    }
+                } else {
+                    console.error('Error fetching chart data:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error fetching chart data:', error);
+            } finally {
+                console.log("done");
+            }
+        }
+
+        async function showChart(container, chartHtml) {
+            // Remove all child nodes
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+
+            // Create a temporary div to parse the HTML string
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = chartHtml;
+
+            // Append child nodes to the container
+            while (tempDiv.firstChild) {
+                container.appendChild(tempDiv.firstChild);
+            }
+
+            // Find and execute script tags
+            const scripts = container.getElementsByTagName('script');
+            for (const script of scripts) {
+                const newScript = document.createElement('script');
+                if (script.src) {
+                    newScript.src = script.src;
+                } else {
+                    newScript.textContent = script.textContent;
+                }
+                document.head.appendChild(newScript).parentNode.removeChild(newScript);
+            }
+        }
+
+
+
+
     </script>
 </body>
 

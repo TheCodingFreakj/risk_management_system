@@ -6,7 +6,8 @@ class QuotesProducerConfig(AppConfig):
     name = 'quotes_producer'
 
     def ready(self):
-        # Only run scheduler when the development server starts
+
+        #Only run scheduler when the development server starts
         if os.environ.get('RUN_MAIN') == 'true':
             from django.core.management import call_command
             call_command('runscheduler')

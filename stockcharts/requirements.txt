@@ -1,0 +1,9 @@
+Django
+djangorestframework
+psycopg2-binary
+kafka-python
+python-dotenv
+requests
+pandas
+alpaca-trade-api 
+plotly

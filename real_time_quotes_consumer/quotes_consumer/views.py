@@ -18,6 +18,7 @@ import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import plotly.io as pio
 from django.db import connection
+from datetime import datetime
 # Configure Redis connection
 redis_client = redis.Redis(host='redis', port=6379, db=0)
 
@@ -304,11 +305,8 @@ def fetch_market_conditions():
 
 
 
+API_KEY_V='BJ9RB5D8OE9UX05M'
 
-thresholds = {
-    'min_roe': 0.15,  # 15%
-    'max_debt_to_equity': 1.0,  # 100%
-}
 API_KEY='cqjbehpr01qnjotffkq0cqjbehpr01qnjotffkqg'
 
 def fetch_financial_data_finnhub(ticker):
@@ -330,6 +328,7 @@ def fetch_financial_data_finnhub(ticker):
 
     # Extract the most recent financial report data
     if 'data' in financials_data:
+        year = financials_data["data"][0]["year"]
         report = financials_data['data'][0]['report']  # Get the report from the first item in data
         
         # Parse the balance sheet (bs)
@@ -355,7 +354,8 @@ def fetch_financial_data_finnhub(ticker):
                     gross_profit = value
                 elif concept == 'us-gaap_OperatingIncomeLoss':
                     operating_income = value
-    returnable = {
+             
+    financial_data = {
         'total_equity': total_equity,
         'total_liabilities': total_liabilities,
         'net_income': net_income,
@@ -363,17 +363,32 @@ def fetch_financial_data_finnhub(ticker):
         'gross_profit': gross_profit,
         'operating_income': operating_income
     }
+    
 
-    logger.info(f"returnable----------------------> {returnable}")
-    return {
-        'total_equity': total_equity,
-        'total_liabilities': total_liabilities,
-        'net_income': net_income,
-        'total_revenue': total_revenue,
-        'gross_profit': gross_profit,
-        'operating_income': operating_income
-    }
 
+    return financial_data
+    
+
+    
+  
+def get_market_growth(symbol='SPY'):
+    # Fetch historical market data for the specified symbol using yfinance
+    df = yf.download(symbol, period='5y', interval='1mo')
+    # Print all the keys (columns) of the DataFrame
+    print("DataFrame columns:", df.columns)
+
+    if not df.empty:
+        # Calculate Market Growth for each year
+        df['Year'] = df.index.year
+        df['Close'] = df['Adj Close']  # Use Adjusted Close for accurate growth calculations
+        df = df.groupby('Year')['Close'].agg(['first', 'last'])
+        df['Market_Growth'] = df['last'] / df['first'] - 1
+        df = df[['Market_Growth']].reset_index()
+        
+        return df
+    else:
+        print("Error fetching data from yfinance")
+        return None
 def calculate_financial_ratios(financial_data):
     # Calculate Debt-to-Equity Ratio
     debt_to_equity = None
@@ -454,33 +469,47 @@ def calculate_macd(price_data, short_window=12, long_window=26, signal_window=9)
     signal_line = macd.ewm(span=signal_window, adjust=False).mean()
     
     return macd, signal_line
-# Function to analyze a group of symbols
 def analyze_group_of_symbols(symbols):
     results = {}
+    market_growth_symbol = 'SPY'
+    market_growth = get_market_growth(symbol=market_growth_symbol)
+
+    if market_growth is not None:
+        avg_market_growth = market_growth['Market_Growth'].mean()
+        print(f"Average Market Growth: {avg_market_growth:.2f}")
+    else:
+        print("Market growth analysis failed.")
+        return
     
+    thresholds = {
+        'max_debt_to_equity': 2.0,
+        'min_roe': 0.15,
+        'min_gross_margin': 0.40
+    }
+
+    if avg_market_growth < 1.0:
+        thresholds['min_roe'] += 0.05
+        thresholds['min_gross_margin'] += 0.05
+    elif avg_market_growth > 1.1:
+        thresholds['min_roe'] -= 0.05
+        thresholds['min_gross_margin'] -= 0.05
+
     for symbol in symbols:
-        # Fetch financial data
         financial_data = fetch_financial_data_finnhub(symbol)
         financial_ratios = calculate_financial_ratios(financial_data)
-
         
-                # Calculate the end date as today and start date as 6 months ago
+        long_term_decision = evaluate_investment(symbol, financial_data, financial_ratios, thresholds)
+
         end_date = datetime.now().strftime('%Y-%m-%d')
         start_date = (datetime.now() - timedelta(days=5*365)).strftime('%Y-%m-%d')
-
-        # Fetch the adjusted close price for the last 6 months
         price_data = yf.download(symbol, start=start_date, end=end_date)['Adj Close']
-        rsi = 75  # Example RSI value
+
         macd, signal_line = calculate_macd(price_data)
-        moving_average = np.mean(price_data)  # Example moving average
+        moving_average = np.mean(price_data)
+        rsi = 75  # Example RSI value
         
-        # Make short-term decision
-        short_term_decision = make_short_term_decision(price_data, rsi, macd, signal_line, moving_average, )
+        short_term_decision = make_short_term_decision(price_data, rsi, macd, signal_line, moving_average)
         
-        # Make long-term decision
-        long_term_decision =evaluate_investment(symbol, financial_data, financial_ratios, thresholds)
-        
-        # Store results
         results[symbol] = {
             'short_term_decision': short_term_decision,
             'long_term_decision': long_term_decision,
@@ -622,11 +651,13 @@ def get_decision_html(decision_results):
 def index(request):
 
     symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+
+    logger.debug(f"DECISION----------------------------------------> {analyze_group_of_symbols(symbols)}")
     
     # Analyze group of symbols for short-term and long-term decisions
     decision_results = analyze_group_of_symbols(symbols)
 
-    logger.debug(f"DECISION----------------------------------------> {decision_results}")
+    
     
     # Get HTML output
     html_output = get_decision_html(decision_results)

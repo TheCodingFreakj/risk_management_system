@@ -4,7 +4,7 @@ from . import views
 urlpatterns = [
     path('', views.index, name='index'),
     path('chart-data/', views.chart_data, name='chart_data'),  # Add this line
-
+    path('get-scenario-data/<int:scenario_id>/', views.get_scenario_data, name='get_scenario_data'),
 ]
 
 # Include the WebSocket URLs

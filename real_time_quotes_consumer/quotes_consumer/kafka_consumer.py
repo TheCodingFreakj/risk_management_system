@@ -72,8 +72,6 @@ class KafkaConsumerService:
          
             
     def consume_messages(self):
-        
-        
         while True:
             current_time = time.time()
             logger.info(f"Starting to consume messages using SSL----> {current_time - self.start_time}")
@@ -193,13 +191,40 @@ class KafkaConsumerService:
         return historical_data_df
     
         # Define a simple moving average crossover strategy
-    def generate_signal(self,data):
-        if data['SMA_20'].iloc[-1] > data['SMA_50'].iloc[-1]:
-            return 'Buy'
-        elif data['SMA_20'].iloc[-1] < data['SMA_50'].iloc[-1]:
-            return 'Sell'
-        else:
-            return 'Hold'
+    def generate_signal(self, current_data):
+        # Get the last row of the DataFrame for the most recent indicators
+        last_row = current_data.iloc[-1]
+
+        # Log all relevant indicators for debugging
+        logger.debug(f"Latest Indicators for Signal Generation: {last_row[['SMA_20', 'SMA_50', 'RSI_14', 'MACD', 'Signal_Line']]}")
+
+        # Example signal generation logic based on SMA, RSI, and MACD
+        if last_row['SMA_20'] > last_row['SMA_50']:
+            if last_row['RSI_14'] < 30 and last_row['MACD'] > last_row['Signal_Line']:
+                logger.debug("Buy signal generated: SMA_20 > SMA_50, RSI < 30, MACD > Signal Line")
+                return "buy"
+            elif last_row['RSI_14'] > 70 and last_row['MACD'] < last_row['Signal_Line']:
+                logger.debug("Sell signal generated: SMA_20 > SMA_50, RSI > 70, MACD < Signal Line")
+                return "sell"
+        elif last_row['SMA_20'] < last_row['SMA_50']:
+            if last_row['RSI_14'] < 30 and last_row['MACD'] > last_row['Signal_Line']:
+                logger.debug("Buy signal generated: SMA_20 < SMA_50, RSI < 30, MACD > Signal Line")
+                return "buy"
+            elif last_row['RSI_14'] > 70 and last_row['MACD'] < last_row['Signal_Line']:
+                logger.debug("Sell signal generated: SMA_20 < SMA_50, RSI > 70, MACD < Signal Line")
+                return "sell"
+
+        # Additional condition for EMA crossovers (Optional)
+        if last_row['EMA_12'] > last_row['EMA_26']:
+            logger.debug("Buy signal generated: EMA_12 > EMA_26")
+            return "buy"
+        elif last_row['EMA_12'] < last_row['EMA_26']:
+            logger.debug("Sell signal generated: EMA_12 < EMA_26")
+            return "sell"
+
+        # If none of the conditions are met, hold the position
+        logger.debug("Hold signal generated: No conditions met for buy or sell")
+        return "hold"
     def process_message(self, message, signal):
         logger.debug(f"Processing Message--------------->: {message}")
         logger.debug(f"Processing Message--------------->: {signal}")

@@ -29,11 +29,37 @@
 
         .flex_container {
             display: flex;
+            /* flex-direction: column; */
             /* justify-content: flex-start; */
-            justify-content: space-between;
-            /* padding: 2%; */
-            padding: 02%;
-            font-size: 10px;
+            /* justify-content: space-between; */
+            padding: 2%;
+
+        }
+
+        div#chart1 {
+    padding: 10px;
+}
+
+div#chart2 {
+    padding: 10px;
+}
+
+
+div#chart3 {
+    padding: 10px;
+}
+
+
+div#chart4 {
+    padding: 10px;
+}
+
+
+        #cont{
+            display: flex;
+            flex-direction: row;
+    justify-content: space-around;
+    flex-wrap: wrap;
         }
 
         .stock-data {
@@ -62,13 +88,23 @@
 
         button {
             padding: 10px 20px;
-            font-size: 1em;
+            width: 200px;
+            /* font-size: 1em; */
+            height: 60px;
+            margin: 0px 9px;
             color: #fff;
             background: black;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s;
+
+
+        }
+
+        select#scenario-select {
+            width: 200px;
+            height: 60px;
         }
 
         button:hover {
@@ -81,93 +117,185 @@
 
         #graphs {
             display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Creates exactly three equal-width columns */
-    gap: 20px;
-    /* padding: 20px; */
-}
+            grid-template-columns: repeat(3, 1fr);
+            /* Creates exactly three equal-width columns */
+            gap: 20px;
+            /* padding: 20px; */
+        }
 
-.grid-item {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
+        .grid-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
 
-.graph-container {
-    margin-bottom: 20px;
-}
+        .graph-container {
+            margin-bottom: 20px;
+        }
 
-h2, h3 {
-    margin-top: 0;
-}
+        h2,
+        h3 {
+            margin-top: 0;
+        }
+        
     </style>
 </head>
 
 <body onload="connectWebSocket()">
     <div id="container">
+        <h1>Market Data Handler</h1>
 
         <div class="flex_container">
-            <h1>Market Data Handler</h1>
+
             <button onclick="connectWebSocket()">Connect WebSocket</button>
+
+
+            <button for="scenario-select">Choose a stress scenario:</button>
+            <select id="scenario-select">
+                <option value="" disabled selected>Select a scenario</option>
+                {% for scenario in scenarios %}
+                <option value="{{ scenario.id }}" data-description="{{ scenario.description }}"
+                    data-impact="{{ scenario.impact_factor }}">
+                    {{ scenario.name }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <div id="scenario-details" style="width: 700px; margin: 0 40px;">
+                <p id="description"></p>
+                <p><strong>Impact Factor:</strong> <span id="impact-factor"></span></p>
+            </div>
+            
+
         </div>
-
-
+<div id="cont">
+    <div id="chart1"></div>
+    <div id="chart2"></div>
+    <div id="chart3"></div>
+    <div id="chart4"></div>
+</div>
+   
 
         <div class="stock-data">
-            <h2>Stock Data for <span id="symbol"></span></h2>
+            <h3>Stock Data for <span id="latestDate"></span> <span id="symbol"></span></h3>
             <p>Current Price: <span id="close"></span></p>
-            <p>High Price of the Day: <span id="high"></span></p>
-            <p>Low Price of the Day: <span id="low"></span></p>
-            <p>Open Price of the Day: <span id="open"></span></p>
-            <p>Previous Close Price: <span id="previousClose"></span></p>
+            <p>Day High: <span id="high"></span></p>
+            <p>Day Low: <span id="low"></span></p>
+            <p>Open: <span id="open"></span></p>
+            <p>Previous Close: <span id="previousClose"></span></p>
+            <p>Volume: <span id="volume"></span></p>
+            <p>MarketCap: <span id="marketCap"></span></p>
+            <p>DividendYield: <span id="dividendYield"></span></p>
+            <p>TrailingPE: <span id="trailingPE"></span></p>
+            <p>TrailingEps: <span id="trailingEps"></span></p>
             <button>Signal: <span id="signalValue"></span></button>
         </div>
 
-        
+
+
+    </div>
+
+
+
+    <div id="dynamic_graphs">
+
+        <div id="chart-container">
+            {{ chart|safe }}
+        </div>
+    </div>
+
+    <div id="graphs">
+        <!-- Loop through the graphs dictionary and render each ticker's data -->
+        {% for ticker, data in graphs.items %}
+        <div class="grid-item">
+            <h2>{{ ticker }}- Your Risk Management</h2>
+
+            <!-- Value-at-Risk (VaR) -->
+            <div class="graph-container">
+                <h3 style="font-weight: bold;">Value-at-Risk (VaR)</h3>
+                <p style="font-weight: bold;">VaR Value: {{ data.var_value }}, Confidence Level: {{data.confidence_level }}</p>
+                <p>This means that there is a {{ data.confidence_level }} chance that the portfolio will not lose more
+                    than
+                    {{ data.percentage }} of its value in a day. </p>
+                <p>The potential for daily losses up to nearly {{ data.percentage }} at a {{ data.confidence_level }}
+                    confidence level suggests that the current portfolio could experience further negative returns</p>
+                <p style="font-weight: bold;">Probable Decision:</p>
+                <p style="font-weight: bold;">{{ data.decision }}</p>
+            </div>
+
+            <!-- Daily Returns Graph -->
+            <div class="graph-container">
+                <h3>Daily Returns</h3>
+                {{ data.daily_returns_div|safe }}
+            </div>
+
+            <!-- Portfolio Returns Graph -->
+            <div class="graph-container">
+                <h3>Portfolio Returns</h3>
+                {{ data.portfolio_returns_div|safe }}
+            </div>
+
 
         </div>
-
-     
-
-            <div id="dynamic_graphs">
-
-                <div id="chart-container">
-                    {{ chart|safe }}
-                </div>
-            </div>
-    
-            <div id="graphs">
-                <!-- Loop through the graphs dictionary and render each ticker's data -->
-                {% for ticker, data in graphs.items %}
-                <div class="grid-item">
-                    <h2>{{ ticker }} Data</h2>
-            
-                    <!-- Daily Returns Graph -->
-                    <div class="graph-container">
-                        <h3>Daily Returns</h3>
-                        {{ data.daily_returns_div|safe }}
-                    </div>
-            
-                    <!-- Portfolio Returns Graph -->
-                    <div class="graph-container">
-                        <h3>Portfolio Returns</h3>
-                        {{ data.portfolio_returns_div|safe }}
-                    </div>
-            
-                    <!-- Value-at-Risk (VaR) -->
-                    <div class="graph-container">
-                        <h3>Value-at-Risk (VaR)</h3>
-                        <p>VaR Value: {{ data.var_value }}, Confidence Level: {{ data.confidence_level }}</p>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            
-
+        {% endfor %}
+    </div>
+    <div id="stock-analysis-container">
+        {{ html_output|safe }}
+    </div>
 
 
     <script>
-      
+    
+    document.getElementById('scenario-select').addEventListener('change', function () {
+            // Get the selected option
+            var selectedOption = this.options[this.selectedIndex];
+
+            // Get the description and impact factor from the selected option
+            var description = selectedOption.getAttribute('data-description');
+            var impactFactor = selectedOption.getAttribute('data-impact');
+
+            // Update the details div
+            document.getElementById('description').innerText = description;
+            document.getElementById('impact-factor').innerText = impactFactor;
+        });
+
+
+        document.getElementById('scenario-select').addEventListener('change', function () {
+    var scenarioId = this.value;
+
+    // Fetch the chart data from the server
+    fetch(`/get-scenario-data/${scenarioId}/`)
+        .then(response => response.json())
+        .then(data => {
+            // Render each Plotly graph in its own div
+            Plotly.newPlot('chart1', JSON.parse(data.chart1).data, JSON.parse(data.chart1).layout);
+            Plotly.newPlot('chart2', JSON.parse(data.chart2).data, JSON.parse(data.chart2).layout);
+            Plotly.newPlot('chart3', JSON.parse(data.chart3).data, JSON.parse(data.chart3).layout);
+            Plotly.newPlot('chart4', JSON.parse(data.chart4).data, JSON.parse(data.chart4).layout);
+            // var chartDiv = document.getElementById("chart");
+            // chartDiv.style.display = "block"
+        });
+});
+
+        // document.getElementById('scenario-select').addEventListener('change', function () {
+        //     var scenarioId = this.value;
+
+        //     // Fetch the chart data from the server
+        //     fetch(`/get-scenario-data/${scenarioId}/`)
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             // Parse the JSON data into a Plotly figure
+        //             var graphData = JSON.parse(data);
+
+        //             // Render the Plotly graph in the specified div
+        //             Plotly.newPlot('chart', graphData.data, graphData.layout);
+
+        //             // Make the chart container visible by setting display to block
+        //             document.getElementById('chart-container').style.display = 'block';
+        //         });
+        // });
+
         function connectWebSocket() {
             var socket = new WebSocket('ws://' + window.location.host + '/ws/quotes/');
 
@@ -183,7 +311,12 @@ h2, h3 {
                 document.getElementById('low').innerText = data.quote.data.dayLow || '-';
                 document.getElementById('open').innerText = data.quote.data.open || '-';
                 document.getElementById('previousClose').innerText = data.quote.data.previousClose || '-';
-
+                document.getElementById('volume').innerText = data.quote.data.volume || '-';
+                document.getElementById('marketCap').innerText = data.quote.data.marketCap || '-';
+                document.getElementById('dividendYield').innerText = data.quote.data.dividendYield || '-';
+                document.getElementById('trailingPE').innerText = data.quote.data.trailingPE || '-';
+                document.getElementById('trailingEps').innerText = data.quote.data.trailingEps || '-';
+                document.getElementById('latestDate').innerText = data.quote.data.latestDate || '-';
                 if (data) {
                     fetchChartData(data.quote.symbol)
                     // setInterval(fetchChartData, 2000);
@@ -205,8 +338,10 @@ h2, h3 {
         async function fetchChartData(symbolUpper) {
             try {
                 const response = await fetch('/chart-data/');
+
                 if (response.ok) {
                     const data = await response.json();
+                    console.log(data)
                     const container = document.getElementById('chart-container');
 
                     // Iterate over all keys in the data object

@@ -27,21 +27,49 @@ class StockDataViewSet(viewsets.ViewSet):
     # USA_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
     SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA','HSBA.L', 'BARC.L', 'VOD.L', 'BP.L', 'RDSA.L']
 
-
-    def get_stock_quote(self,symbol):
+    def get_stock_quote(self, symbol):
         data_for_kafka = {}
         stock = yf.Ticker(symbol)
+
+        # Fetch the latest historical data to get the latest date
+        historical_data = stock.history(period="1d")  # Fetch data for today
+        latest_date = historical_data.index[-1] if not historical_data.empty else None
+
+        # Get the current stock quote
         current_quote = stock.info
         logger.debug(f'Current quote for {symbol}:')
+
+        # Define the relevant fields to filter
         relevant_fields = [
             'currentPrice', 'previousClose', 'open', 'dayHigh', 'dayLow',
-            'volume', 'marketCap', 'dividendYield', 'peRatio', 'epsTrailingTwelveMonths'
+            'volume', 'marketCap', 'dividendYield', 'trailingPE', 'trailingEps'
         ]
-        current_quote_filtered = {key: current_quote[key] for key in relevant_fields if key in current_quote}
+
+        # Filter the current quote to include only relevant fields
+        current_quote_filtered = {key: current_quote.get(key, None) for key in relevant_fields}
+
+        # Add the latest date to the filtered quote
+        if latest_date:
+            current_quote_filtered['latestDate'] = latest_date.strftime('%Y-%m-%d')
+
+        # Log the current quote as a dictionary with the latest date
+        logger.debug(f'Current quote for {symbol}: {current_quote_filtered}')
         
-        # Log the current quote as a dictionary
-        logger.debug(f'Current quote for {symbol}: {current_quote_filtered}')  
-        return current_quote_filtered    
+        return current_quote_filtered
+    # def get_stock_quote(self,symbol):
+    #     data_for_kafka = {}
+    #     stock = yf.Ticker(symbol)
+    #     current_quote = stock.info
+    #     logger.debug(f'Current quote for {symbol}:')
+    #     relevant_fields = [
+    #         'currentPrice', 'previousClose', 'open', 'dayHigh', 'dayLow',
+    #         'volume', 'marketCap', 'dividendYield', 'peRatio', 'epsTrailingTwelveMonths'
+    #     ]
+    #     current_quote_filtered = {key: current_quote[key] for key in relevant_fields if key in current_quote}
+        
+    #     # Log the current quote as a dictionary
+    #     logger.debug(f'Current quote for {symbol}: {current_quote_filtered}')  
+    #     return current_quote_filtered    
                 
 
     @action(detail=True, methods=['post'])

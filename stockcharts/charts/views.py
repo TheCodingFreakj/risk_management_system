@@ -16,7 +16,7 @@ class StockDataAPIView(APIView):
         api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL, api_version='v2')
 
         # Define the array of stock symbols and fetch the initial data
-        stock_symbols = ['AAPL', 'GOOGL', 'MSFT']  # Add more symbols as needed
+        stock_symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']  # Add more symbols as needed
         start_date = '2023-01-01'
         end_date = date.today()
 
@@ -37,3 +37,6 @@ class StockDataAPIView(APIView):
         serializer = StockDataSerializer(combined_data.to_dict(orient='records'), many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+

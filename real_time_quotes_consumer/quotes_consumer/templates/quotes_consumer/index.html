@@ -22,6 +22,26 @@
             color: #333;
         }
 
+         /* Style the grid container */
+         .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* Two equal-width columns */
+            grid-gap: 20px; /* Spacing between grid items */
+            margin: 20px 0; /* Margin above and below the grid */
+        }
+
+        /* Style the individual grid items */
+        .grid-item {
+            padding: 10px;
+            border: 1px solid #ccc; /* Border around each grid item */
+            border-radius: 5px; /* Rounded corners */
+            background-color: #f9f9f9; /* Background color for grid items */
+        }
+
+        .grid-item h2 {
+            margin-top: 0; /* Remove top margin for h2 in grid items */
+        }
+
         #container {
             display: flex;
             flex-direction: column;
@@ -45,7 +65,9 @@
             justify-content: space-around;
             flex-wrap: wrap;
         }
-
+        div#graphs-container {
+    padding: 40px;
+}
         .stock-data {
             display: flex;
             justify-content: space-between;
@@ -98,21 +120,7 @@
             gap: 20px;
         }
 
-        .grid-item {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .graph-container {
-            margin-bottom: 20px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            /* width: 500px; */
-        }
-
+        
         h2,
         h3 {
             margin-top: 0;
@@ -128,40 +136,26 @@
     display: flex;
     justify-content: space-around;
 }
-        /* Loader container */
-        .loader-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
+.loader-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
 
-        /* The spinner itself */
-        .spinner {
-            border: 16px solid #f3f3f3;
-            border-top: 16px solid #3498db;
-            border-radius: 50%;
-            width: 120px;
-            height: 120px;
-            animation: spin 2s linear infinite;
-        }
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #000;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
 
-        /* Spin animation */
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
     </style>
 </head>
 <!-- onload="initializePage()" -->
@@ -231,18 +225,17 @@
      
     </div>
 
-    <div>
-
-        {{ html_output|safe }}
-        <!-- Additional graphs and analysis data will be loaded here -->
+       
+   
+    
+    <div id="content-container" style="display: none;">
+        <!-- This is where the final content will be loaded -->
     </div>
 
     <div id="container">
         <div id="graphs-container">
                 <!-- Loader container -->
-    <div id="loader" class="loader-container" style="display: none;">
-        <div class="spinner"></div>
-    </div>
+  
 
         </div>
     </div>
@@ -250,6 +243,44 @@
 
 
     <script>
+document.addEventListener("DOMContentLoaded", function() {
+            // Show the loader
+            const loader = document.getElementById("loader");
+            const contentContainer = document.getElementById("content-container");
+
+            // Fetch the final context
+            fetch("/get-final-context/")  // Adjust the URL according to your routing
+                .then(response => response.json())
+                .then(data => {
+                    // Hide the loader
+                    loader.style.display = "none";
+
+                    // Show the content container
+                    contentContainer.style.display = "block";
+
+                    console.log(data.html_entries);
+
+                    // Insert the HTML content first
+                    if (data.html_entries) {
+                        data.html_entries.forEach((htmlEntry, index) => {
+                            // Inject the HTML for each plot
+                            contentContainer.innerHTML += htmlEntry;
+                        });
+
+                        // Render the corresponding Plotly plots after the HTML has been injected
+                        Object.keys(data.graphs).forEach((plotDivId) => {
+                            const graphData = data.graphs[plotDivId];
+                            Plotly.newPlot(plotDivId, graphData.data, graphData.layout);
+                        });
+                    } else {
+                        contentContainer.innerHTML = "<p>No data available.</p>";
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching final context:", error);
+                    loader.innerHTML = "<p>Failed to load data. Please try again later.</p>";
+                });
+        });
 
                 // JavaScript to handle loader visibility
                 document.addEventListener("DOMContentLoaded", function() {
@@ -293,22 +324,11 @@
                     throw new Error('Failed to load additional data');
                 }
                 const data = await response.json();
-
-                if(!data.html_output){
-                    showLoader()
-                }else{
-                    hideLoader()
-                }
-
-                console.log(data.html_output, "..............................")
+                console.log("..............................")
                 // Inject the graphs and html_output content
                 const dynamicContent = document.getElementById("graphs-container");
 
-                if(!data.graphs){
-                    showLoader()
-                }else{
-                    hideLoader()
-                }
+                
                 if (data.graphs) {
                     for (const [ticker, graphData] of Object.entries(data.graphs)) {
                         const graphContainer = document.createElement('div');
@@ -366,7 +386,7 @@
             document.getElementById('scenario-select').addEventListener('change', handleScenarioChange);
             await connectWebSocket();
             await fetchAndUpdateData();
-            hideLoader()
+           
         }
 
         function handleScenarioChange() {
@@ -384,13 +404,6 @@
             try {
                 const response = await fetch(`/get-scenario-data/${scenarioId}/`);
                 const data = await response.json();
-
-                if(!data){
-                    showLoader()
-                }else{
-                    hideLoader()
-                }
-
                 if (response.ok) {
                     renderCharts(data);
                 } else {

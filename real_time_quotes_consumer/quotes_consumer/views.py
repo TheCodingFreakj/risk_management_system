@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 import numpy as np
 import plotly.graph_objects as go
+from django.core.paginator import Paginator
 import pandas as pd
 import redis
 import json
@@ -33,6 +34,14 @@ API_KEY_V='BJ9RB5D8OE9UX05M'
 
 API_KEY='cqjbehpr01qnjotffkq0cqjbehpr01qnjotffkqg'
 
+
+async def get_final_context(request):
+    symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+    scenarios = await fetch_stress_scenarios_async()
+    final_context = await compute_final_context(symbols, scenarios)
+
+    return JsonResponse(final_context)
+
 async def compute_final_context(symbols, scenarios):
     # Start the analysis for the symbols asynchronously
     try:
@@ -42,64 +51,44 @@ async def compute_final_context(symbols, scenarios):
         logger.error(f"Error fetching decision results: {e}")
         decision_results = {}
 
-    # Generate the HTML output once the analysis is complete
+    # Generate the HTML output and graph data
     try:
-        html_output = get_decision_html(decision_results)
-        logger.info("HTML output generated successfully")
+        html_entries, graph_data = get_decision_html_and_graphs(decision_results)
+        logger.info("HTML and graph data generated successfully")
     except Exception as e:
-        logger.error(f"Error generating HTML output: {e}")
-        html_output = ""
+        logger.error(f"Error generating HTML and graph data: {e}")
+        html_entries = []
+        graph_data = {}
 
     return {
-        'html_output': html_output,
+        'html_entries': html_entries,
         'loading': False,
         'scenarios': scenarios,
-        'graphs': {}  # Placeholder or actual graph data if needed
+        'graphs': graph_data
     }
 
-
-
-
-
-
-async def index(request):
-    # Render the initial page with loading indicators or minimal content.
-    scenarios = await fetch_stress_scenarios_async()  # Fetch only the scenarios for initial load.
+def index(request):
+    return render(request, 'quotes_consumer/index.html')
+# async def index(request):
+#     # Initial fetch and render
+#     scenarios = await fetch_stress_scenarios_async()
+#     initial_context = {
+#         'loading': True,
+#         'scenarios': scenarios,
+#         'graphs': {},
+#         'html_output': "",  # Empty or placeholder data
+#     }
     
-    initial_context = {
-        'loading': True,
-        'scenarios': scenarios,
-        'graphs': {},  # Empty or placeholder data
-        'html_output': "",  # Empty or placeholder data
-    }
-
-    # Render the initial page with loading indicators
-    initial_response = render(request, 'quotes_consumer/index.html', initial_context)
-
-
-
-    # Symbols to analyze
-    symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
-
-    # Offload the async final context computation using asyncio tasks
-    final_context_future = asyncio.create_task(compute_final_context(symbols, scenarios))
-    start_time = time.time()
-    while not final_context_future.done():
-        current_time = time.time()
-        elapsed_time = current_time - start_time
-        logger.info(f"Still Processing... {elapsed_time:.2f} seconds elapsed")
-        await asyncio.sleep(1)  # Sleep for 1 second to observe the time increments clearly
-
-
-    end_time = time.time()
-    processing_time = end_time - start_time
-    logger.info(f"Processing completed in {processing_time:.2f} seconds")
-   # Once the task is done, retrieve the result
-    if final_context_future.done():
-        final_context = await final_context_future
-        logger.info(f"final_context------------------------>{final_context}")
-        return render(request, 'quotes_consumer/index.html', final_context)
-
+#     initial_response = render(request, 'quotes_consumer/index.html', initial_context)
+    
+#     # Immediately return the initial response so the user can see the loading state
+#     symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+#     final_context_future = asyncio.create_task(compute_final_context(symbols, scenarios))
+    
+#     # Handle the completion of the task and update the page with the final content
+#     final_context = await final_context_future
+    
+#     return render(request, 'quotes_consumer/index.html', final_context)
 
 
   
@@ -126,8 +115,7 @@ async def load_additional_data(request):
     logger.debug(f"graphs--------------------> {graphs}")
     # Return the additional data as JSON
     return JsonResponse({
-        'graphs': graphs,
-        
+        'graphs': graphs, 
     })
 async def process_graphs(all_ticker_data, market_returns_dict):
     # Process each ticker's data asynchronously
@@ -268,7 +256,7 @@ async def analyze_group_of_symbols_async(symbols):
         logger.info(f"Average Market Growth: {avg_market_growth:.2f}")
     else:
         logger.warning("Market growth analysis failed.")
-        return
+        return {}
 
     thresholds = {
         'max_debt_to_equity': 2.0,
@@ -289,18 +277,16 @@ async def analyze_group_of_symbols_async(symbols):
             financial_data = await fetch_financial_data_finnhub_async(symbol)
             financial_ratios = calculate_financial_ratios(financial_data)
             
-            # Run CPU-bound tasks in a separate thread
             long_term_decision = await asyncio.to_thread(evaluate_investment, symbol, financial_data, financial_ratios, thresholds)
             logger.info(f"Financial analysis completed for symbol: {symbol}")
 
             end_date = datetime.now().strftime('%Y-%m-%d')
             start_date = (datetime.now() - timedelta(days=5*365)).strftime('%Y-%m-%d')
-            
+
             try:
                 logger.info(f"Fetching price data for symbol: {symbol}")
-                # Await the result of the to_thread call before trying to access the data
                 price_data_raw = await asyncio.to_thread(yf.download, symbol, start=start_date, end=end_date)
-                price_data = price_data_raw['Adj Close']  # Now subscript the result to get 'Adj Close'
+                price_data = price_data_raw['Adj Close']
             except KeyError as e:
                 logger.error(f"KeyError: {e} for ticker {symbol}. Data might not be available.")
                 continue
@@ -312,17 +298,16 @@ async def analyze_group_of_symbols_async(symbols):
             moving_average = await asyncio.to_thread(np.mean, price_data)
             rsi = 75  # Example RSI value
             
-            short_term_decision = await asyncio.to_thread(make_short_term_decision, price_data, rsi, macd, signal_line, moving_average)
-            
-            results[symbol] = {
-                'short_term_decision': short_term_decision,
+            # Convert NumPy arrays to lists for JSON serialization
+            results[symbol] = convert_to_json_serializable({
+                'short_term_decision': await asyncio.to_thread(make_short_term_decision, price_data, rsi, macd, signal_line, moving_average),
                 'long_term_decision': long_term_decision,
-                'price_data': price_data,
+                'price_data': price_data.tolist(),  # Convert to list for JSON serialization
                 'rsi': rsi,
-                'macd': macd,
-                'moving_average': moving_average,
-                'financial_data': financial_data
-            }
+                'macd': macd.tolist() if isinstance(macd, np.ndarray) else macd,
+                'moving_average': float(moving_average),  # Ensure this is a float, not a NumPy type
+                'financial_data': financial_data  # Ensure financial_data is JSON serializable
+            })
         except Exception as e:
             logger.error(f"Failed to analyze symbol {symbol}: {str(e)}")
             continue
@@ -330,72 +315,167 @@ async def analyze_group_of_symbols_async(symbols):
     logger.info(f"Analysis complete for symbols: {symbols}")
     return results
 
-def get_decision_html(decision_results):
-    html_output = """
-    <style>
-        .grid-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* Three equal-width columns */
-            grid-gap: 20px; /* Spacing between grid items */
-            margin: 20px 0; /* Margin above and below the grid */
-        }
 
-        .grid-item {
-            padding: 10px;
-            border: 1px solid #ccc; /* Border around each grid item */
-            border-radius: 5px; /* Rounded corners */
-            background-color: #f9f9f9; /* Background color for grid items */
-        }
 
-        .grid-item h2 {
-            margin-top: 0; /* Remove top margin for h2 in grid items */
-        }
-    </style>
-    """
 
-    # Initialize an array to hold HTML entries for all symbols
+def plot_short_term_analysis_html(symbol, data):
+    price_data = np.array(data['price_data'])
+    rsi = data.get('rsi', None)
+    macd = np.array(data['macd']) if isinstance(data['macd'], list) else data['macd']
+    moving_average = data['moving_average']
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=price_data, mode='lines', name='Price'))
+    fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[moving_average]*len(price_data),
+                             mode='lines', name='Moving Average', line=dict(dash='dash', color='orange')))
+
+    if rsi is not None:
+        fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[rsi]*len(price_data),
+                                 mode='lines', name='RSI', line=dict(color='blue')))
+
+    if macd is not None:
+        fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=macd,
+                                 mode='lines', name='MACD', line=dict(color='red')))
+
+    fig.update_layout(title=f"Short-Term Analysis for {symbol}",
+                      xaxis_title="Time",
+                      yaxis_title="Value")
+
+    return fig.to_plotly_json()['data'], fig.to_plotly_json()['layout']
+
+
+def plot_long_term_analysis(symbol, financial_data):
+    labels = list(financial_data.keys())
+    values = [financial_data[label] for label in labels]
+
+    fig = go.Figure([go.Bar(x=labels, y=values, text=values, textposition='auto')])
+    fig.update_layout(title=f"Long-Term Analysis for {symbol}",
+                      xaxis_title="Financial Metrics",
+                      yaxis_title="Values")
+
+    return fig.to_plotly_json()['data'], fig.to_plotly_json()['layout']
+def get_decision_html_and_graphs(decision_results):
+    logger.info(f"decision_results: {decision_results}")
     entries = []
+    graph_data = {}
 
-    # Example loop through multiple symbols and their decisions
-    for symbol, decisions in decision_results.items():
-        summary = generate_summary(symbol, decisions)
-        entry_html = '<div class="grid-container">'
-
-        # Short-term decision and plot
-        entry_html += f"""
-        <div class="grid-item">
-            <h2>Decisions for {symbol} - Short-term</h2>
-            <p><strong>Decision:</strong> {decisions['short_term_decision']}</p>
-            {plot_short_term_analysis_html(symbol, decisions)}
-        </div>
-        """
-
-        # Long-term decision and plot
-        entry_html += f"""
-        <div class="grid-item">
-            <h2>Decisions for {symbol} - Long-term</h2>
-            <p><strong>Decision:</strong> {decisions['long_term_decision']}</p>
-            {plot_long_term_analysis_html(symbol, decisions['financial_data'])}
-        </div>
-        """
-
-        # Add a third item (e.g., additional information, analysis, or summary)
-        entry_html += f"""
+    for index, (symbol, decisions) in enumerate(decision_results.items()):
+        entry_html = f"""
+        <div class="grid-container">
             <div class="grid-item">
-                <h2>Additional Analysis for {symbol}</h2>
-                <p><strong>Summary:</strong> {summary}</p>
+                <h2>Decisions for {symbol} - Short-term</h2>
+                <p><strong>Decision:</strong> {decisions['short_term_decision']}</p>
+                <div id="plotDiv{index}_short_term"></div>
             </div>
-            """
+            <div class="grid-item">
+                <h2>Decisions for {symbol} - Long-term</h2>
+                <p><strong>Decision:</strong> {decisions['long_term_decision']}</p>
+                <div id="plotDiv{index}_long_term"></div>
+            </div>
+           
+        </div>
+        <hr>
+        """
 
-        entry_html += '</div><hr>'  # Close the grid container and add a horizontal rule
+        # Ensure data is JSON-serializable
+        short_term_data, short_term_layout = plot_short_term_analysis_html(symbol, decisions)
+        long_term_data, long_term_layout = plot_long_term_analysis(symbol, decisions['financial_data'])
 
-        # Add the generated HTML to the entries array
+        # Convert any numpy arrays to lists before adding to graph_data
+        graph_data[f"plotDiv{index}_short_term"] = {
+            'data': convert_to_json_serializable(short_term_data),
+            'layout': convert_to_json_serializable(short_term_layout)
+        }
+        graph_data[f"plotDiv{index}_long_term"] = {
+            'data': convert_to_json_serializable(long_term_data),
+            'layout': convert_to_json_serializable(long_term_layout)
+        }
+
         entries.append(entry_html)
 
-    # Concatenate all entries to form the final HTML output
-    html_output += ''.join(entries)
+    return entries, graph_data
 
-    return mark_safe(html_output)
+def convert_to_json_serializable(obj):
+    """Recursively convert numpy arrays and other non-serializable objects to serializable types."""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, list):
+        return [convert_to_json_serializable(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {key: convert_to_json_serializable(value) for key, value in obj.items()}
+    else:
+        return obj
+
+
+# def get_decision_html(decision_results):
+#     html_output = """
+#     <style>
+#         .grid-container {
+#             display: grid;
+#             grid-template-columns: 1fr 1fr 1fr; /* Three equal-width columns */
+#             grid-gap: 20px; /* Spacing between grid items */
+#             margin: 20px 0; /* Margin above and below the grid */
+#         }
+
+#         .grid-item {
+#             padding: 10px;
+#             border: 1px solid #ccc; /* Border around each grid item */
+#             border-radius: 5px; /* Rounded corners */
+#             background-color: #f9f9f9; /* Background color for grid items */
+#         }
+
+#         .grid-item h2 {
+#             margin-top: 0; /* Remove top margin for h2 in grid items */
+#         }
+#     </style>
+#     """
+
+#     # Initialize an array to hold HTML entries for all symbols
+#     entries = []
+
+#     # Example loop through multiple symbols and their decisions
+#     for symbol, decisions in decision_results.items():
+#         summary = generate_summary(symbol, decisions)
+#         entry_html = '<div class="grid-container">'
+
+#         # Short-term decision and plot
+#         entry_html += f"""
+#         <div class="grid-item">
+#             <h2>Decisions for {symbol} - Short-term</h2>
+#             <p><strong>Decision:</strong> {decisions['short_term_decision']}</p>
+#             {plot_short_term_analysis_html(symbol, decisions)}
+#         </div>
+#         """
+
+#         # Long-term decision and plot
+#         entry_html += f"""
+#         <div class="grid-item">
+#             <h2>Decisions for {symbol} - Long-term</h2>
+#             <p><strong>Decision:</strong> {decisions['long_term_decision']}</p>
+#             {plot_long_term_analysis_html(symbol, decisions['financial_data'])}
+#         </div>
+#         """
+
+#         # Add a third item (e.g., additional information, analysis, or summary)
+#         entry_html += f"""
+#             <div class="grid-item">
+#                 <h2>Additional Analysis for {symbol}</h2>
+#                 <p><strong>Summary:</strong> {summary}</p>
+#             </div>
+#             """
+
+#         entry_html += '</div><hr>'  # Close the grid container and add a horizontal rule
+
+#         # Add the generated HTML to the entries array
+#         entries.append(entry_html)
+
+#     return entries
+
+    # # Concatenate all entries to form the final HTML output
+    # html_output += ''.join(entries)
+
+    # return mark_safe(html_output)
 
 def retrieve_risk_management_data():
     base_url = "http://realtimequotesproducer:8003/quotes_producer/"
@@ -804,45 +884,45 @@ def generate_summary(symbol, decisions):
     
     return summary
 
-def plot_short_term_analysis_html(symbol, data):
-    price_data = data['price_data']
-    rsi = data['rsi']
-    macd = data['macd']
-    moving_average = data['moving_average']
+# def plot_short_term_analysis_html(symbol, data):
+#     price_data = data['price_data']
+#     rsi = data['rsi']
+#     macd = data['macd']
+#     moving_average = data['moving_average']
 
-    # Create price plot
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=price_data, mode='lines', name='Price'))
-    fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[moving_average]*len(price_data),
-                             mode='lines', name='Moving Average', line=dict(dash='dash', color='orange')))
+#     # Create price plot
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=price_data, mode='lines', name='Price'))
+#     fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[moving_average]*len(price_data),
+#                              mode='lines', name='Moving Average', line=dict(dash='dash', color='orange')))
 
-    fig.update_layout(title=f"Short-Term Analysis for {symbol}",
-                      xaxis_title="Time",
-                      yaxis_title="Price")
+#     fig.update_layout(title=f"Short-Term Analysis for {symbol}",
+#                       xaxis_title="Time",
+#                       yaxis_title="Price")
 
-    # Create RSI and MACD plot
-    fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[rsi]*len(price_data),
-                             mode='lines', name='RSI', line=dict(color='blue')))
-    fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[macd]*len(price_data),
-                             mode='lines', name='MACD', line=dict(color='red')))
+#     # Create RSI and MACD plot
+#     fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[rsi]*len(price_data),
+#                              mode='lines', name='RSI', line=dict(color='blue')))
+#     fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[macd]*len(price_data),
+#                              mode='lines', name='MACD', line=dict(color='red')))
 
-    # Convert the figure to HTML and mark it as safe
-    plot_html = pio.to_html(fig, full_html=False)
-    return mark_safe(plot_html)
+#     # Convert the figure to HTML and mark it as safe
+#     plot_html = pio.to_html(fig, full_html=False)
+#     return mark_safe(plot_html)
 
-def plot_long_term_analysis_html(symbol, financial_data):
-    labels = list(financial_data.keys())
-    values = [financial_data[label] for label in labels]
+# def plot_long_term_analysis_html(symbol, financial_data):
+#     labels = list(financial_data.keys())
+#     values = [financial_data[label] for label in labels]
 
-    fig = go.Figure([go.Bar(x=labels, y=values, text=values, textposition='auto')])
+#     fig = go.Figure([go.Bar(x=labels, y=values, text=values, textposition='auto')])
 
-    fig.update_layout(title=f"Long-Term Analysis for {symbol}",
-                      xaxis_title="Financial Metrics",
-                      yaxis_title="Values")
+#     fig.update_layout(title=f"Long-Term Analysis for {symbol}",
+#                       xaxis_title="Financial Metrics",
+#                       yaxis_title="Values")
 
-    # Convert the figure to HTML and mark it as safe
-    plot_html = pio.to_html(fig, full_html=False)
-    return mark_safe(plot_html)
+#     # Convert the figure to HTML and mark it as safe
+#     plot_html = pio.to_html(fig, full_html=False)
+#     return mark_safe(plot_html)
 
 
 def get_scenario_data(request, scenario_id):
@@ -893,18 +973,13 @@ def get_scenario_data(request, scenario_id):
     }
 
     return JsonResponse(response_data, safe=False)
-# # Function for analyzing symbols asynchronously
-# async def analyze_group_of_symbols_async(symbols):
-#     loop = asyncio.get_event_loop()
-#     return await loop.run_in_executor(None, analyze_group_of_symbols, symbols)
 
-# Function for retrieving risk management data asynchronously
 async def retrieve_risk_management_data_async():
-    return retrieve_risk_management_data()
+    return  retrieve_risk_management_data()
 
 # Function for retrieving market returns asynchronously
 async def market_returns_async():
-    return market_returns()
+    return  market_returns()
 
 
 async def fetch_stress_scenarios_async():

@@ -45,7 +45,7 @@ class KafkaConsumerService:
             logger.warning(f"No historical data found for symbol: {message}. Skipping processing.")
             return
         
-        logger.debug(f"historical_data_df: {historical_data_df}")
+        # logger.debug(f"historical_data_df: {historical_data_df}")
         # Assuming message["data"]["currentPrice"] should be a dictionary
         current_price_data = int(current_price)
         if isinstance(current_price_data, tuple):
@@ -88,8 +88,8 @@ class KafkaConsumerService:
                     logger.info(f"Processing Message------->: {message}")
                     logger.info(f"Processing message_timestamp------->: {message_timestamp}")
                   
-                    signal = self.calculate_signal(message.value['symbol'],message.value["data"]["currentPrice"] )
-                    self.process_message(message.value,signal)
+                    # signal = self.calculate_signal(message.value['symbol'],message.value["data"]["currentPrice"] )
+                    self.process_message(message.value, message.value['symbol'], message.value["data"]["currentPrice"] )
                     new_messages.append((message.value, datetime.now()))  # Add message with reception time
                     self.consumer.commit()
                     logger.info(f"Commiting Messages------->{new_messages}")
@@ -105,8 +105,8 @@ class KafkaConsumerService:
                 # Process cached messages if no new message was processed
                 logger.info("No new messages received. Reprocessing cached messages.")
                 for cached_message, _ in self.cached_messages:
-                    signal = self.calculate_signal(cached_message['symbol'],cached_message["data"]["currentPrice"] )
-                    self.process_message(cached_message,signal)
+                    # signal = self.calculate_signal(cached_message['symbol'],cached_message["data"]["currentPrice"] )
+                    self.process_message(cached_message, cached_message['symbol'], cached_message["data"]["currentPrice"])
                 self.message_processed = False    
    
 
@@ -154,7 +154,7 @@ class KafkaConsumerService:
         if not historical_data.exists():
             logger.warning(f"No historical data found for symbol: {symbol}")
             return pd.DataFrame() 
-        logger.debug(f"historical_data: {historical_data}")
+        # logger.debug(f"historical_data: {historical_data}")
         # Convert the ORM query result to a DataFrame
         historical_data_df = pd.DataFrame([{
             'date': record.date,
@@ -164,7 +164,7 @@ class KafkaConsumerService:
             'close_price': record.close_price,
             'volume': record.volume
         } for record in historical_data])
-        logger.debug(f"historical_data_df: {historical_data_df}")
+        # logger.debug(f"historical_data_df: {historical_data_df}")
                 # Convert the date column to datetime format
         historical_data_df['date'] = pd.to_datetime(historical_data_df['date'])
 
@@ -187,7 +187,7 @@ class KafkaConsumerService:
         historical_data_df['EMA_26'] = historical_data_df['close_price'].ewm(span=26, adjust=False).mean()
         historical_data_df['MACD'] = historical_data_df['EMA_12'] - historical_data_df['EMA_26']
         historical_data_df['Signal_Line'] = historical_data_df['MACD'].ewm(span=9, adjust=False).mean()
-        logger.debug(f"historical_data_df: {historical_data_df}")
+        # logger.debug(f"historical_data_df: {historical_data_df}")
         return historical_data_df
     
         # Define a simple moving average crossover strategy
@@ -196,7 +196,7 @@ class KafkaConsumerService:
         last_row = current_data.iloc[-1]
 
         # Log all relevant indicators for debugging
-        logger.debug(f"Latest Indicators for Signal Generation: {last_row[['SMA_20', 'SMA_50', 'RSI_14', 'MACD', 'Signal_Line']]}")
+        # logger.debug(f"Latest Indicators for Signal Generation: {last_row[['SMA_20', 'SMA_50', 'RSI_14', 'MACD', 'Signal_Line']]}")
 
         # Example signal generation logic based on SMA, RSI, and MACD
         if last_row['SMA_20'] > last_row['SMA_50']:
@@ -225,10 +225,13 @@ class KafkaConsumerService:
         # If none of the conditions are met, hold the position
         logger.debug("Hold signal generated: No conditions met for buy or sell")
         return "hold"
-    def process_message(self, message, signal):
+    def process_message(self, message, symbol, currentPrice):
         logger.debug(f"Processing Message--------------->: {message}")
-        logger.debug(f"Processing Message--------------->: {signal}")
+        
         try:
+
+            signal = self.calculate_signal(symbol,currentPrice)
+            logger.debug(f"Processing Message--------------->: {signal}")
             message["signal"] = signal
            
             

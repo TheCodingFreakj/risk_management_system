@@ -4,7 +4,6 @@ from django.http import JsonResponse
 from django.shortcuts import render
 import numpy as np
 import plotly.graph_objects as go
-from django.core.paginator import Paginator
 import pandas as pd
 import redis
 import json
@@ -15,7 +14,6 @@ import logging
 import yfinance as yf
 from datetime import datetime, timedelta
 import aiohttp
-from django.utils.safestring import mark_safe
 from django.conf import settings
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -25,7 +23,7 @@ from asgiref.sync import sync_to_async
 from concurrent.futures import ThreadPoolExecutor
 import aiohttp
 import time
-from django.utils.html import escape
+
 # Configure Redis connection
 redis_client = redis.Redis(host='redis', port=6379, db=0)
 
@@ -33,6 +31,8 @@ logger = logging.getLogger(__name__)
 API_KEY_V='BJ9RB5D8OE9UX05M'
 
 API_KEY='cqjbehpr01qnjotffkq0cqjbehpr01qnjotffkqg'
+
+
 
 
 async def get_final_context(request):
@@ -69,29 +69,6 @@ async def compute_final_context(symbols, scenarios):
 
 def index(request):
     return render(request, 'quotes_consumer/index.html')
-# async def index(request):
-#     # Initial fetch and render
-#     scenarios = await fetch_stress_scenarios_async()
-#     initial_context = {
-#         'loading': True,
-#         'scenarios': scenarios,
-#         'graphs': {},
-#         'html_output': "",  # Empty or placeholder data
-#     }
-    
-#     initial_response = render(request, 'quotes_consumer/index.html', initial_context)
-    
-#     # Immediately return the initial response so the user can see the loading state
-#     symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
-#     final_context_future = asyncio.create_task(compute_final_context(symbols, scenarios))
-    
-#     # Handle the completion of the task and update the page with the final content
-#     final_context = await final_context_future
-    
-#     return render(request, 'quotes_consumer/index.html', final_context)
-
-
-  
     
 async def load_additional_data(request):
 
@@ -408,74 +385,6 @@ def convert_to_json_serializable(obj):
         return obj
 
 
-# def get_decision_html(decision_results):
-#     html_output = """
-#     <style>
-#         .grid-container {
-#             display: grid;
-#             grid-template-columns: 1fr 1fr 1fr; /* Three equal-width columns */
-#             grid-gap: 20px; /* Spacing between grid items */
-#             margin: 20px 0; /* Margin above and below the grid */
-#         }
-
-#         .grid-item {
-#             padding: 10px;
-#             border: 1px solid #ccc; /* Border around each grid item */
-#             border-radius: 5px; /* Rounded corners */
-#             background-color: #f9f9f9; /* Background color for grid items */
-#         }
-
-#         .grid-item h2 {
-#             margin-top: 0; /* Remove top margin for h2 in grid items */
-#         }
-#     </style>
-#     """
-
-#     # Initialize an array to hold HTML entries for all symbols
-#     entries = []
-
-#     # Example loop through multiple symbols and their decisions
-#     for symbol, decisions in decision_results.items():
-#         summary = generate_summary(symbol, decisions)
-#         entry_html = '<div class="grid-container">'
-
-#         # Short-term decision and plot
-#         entry_html += f"""
-#         <div class="grid-item">
-#             <h2>Decisions for {symbol} - Short-term</h2>
-#             <p><strong>Decision:</strong> {decisions['short_term_decision']}</p>
-#             {plot_short_term_analysis_html(symbol, decisions)}
-#         </div>
-#         """
-
-#         # Long-term decision and plot
-#         entry_html += f"""
-#         <div class="grid-item">
-#             <h2>Decisions for {symbol} - Long-term</h2>
-#             <p><strong>Decision:</strong> {decisions['long_term_decision']}</p>
-#             {plot_long_term_analysis_html(symbol, decisions['financial_data'])}
-#         </div>
-#         """
-
-#         # Add a third item (e.g., additional information, analysis, or summary)
-#         entry_html += f"""
-#             <div class="grid-item">
-#                 <h2>Additional Analysis for {symbol}</h2>
-#                 <p><strong>Summary:</strong> {summary}</p>
-#             </div>
-#             """
-
-#         entry_html += '</div><hr>'  # Close the grid container and add a horizontal rule
-
-#         # Add the generated HTML to the entries array
-#         entries.append(entry_html)
-
-#     return entries
-
-    # # Concatenate all entries to form the final HTML output
-    # html_output += ''.join(entries)
-
-    # return mark_safe(html_output)
 
 def retrieve_risk_management_data():
     base_url = "http://realtimequotesproducer:8003/quotes_producer/"
@@ -883,47 +792,6 @@ def generate_summary(symbol, decisions):
     summary += "Please consider the overall market conditions and your investment strategy before making any decisions."
     
     return summary
-
-# def plot_short_term_analysis_html(symbol, data):
-#     price_data = data['price_data']
-#     rsi = data['rsi']
-#     macd = data['macd']
-#     moving_average = data['moving_average']
-
-#     # Create price plot
-#     fig = go.Figure()
-#     fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=price_data, mode='lines', name='Price'))
-#     fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[moving_average]*len(price_data),
-#                              mode='lines', name='Moving Average', line=dict(dash='dash', color='orange')))
-
-#     fig.update_layout(title=f"Short-Term Analysis for {symbol}",
-#                       xaxis_title="Time",
-#                       yaxis_title="Price")
-
-#     # Create RSI and MACD plot
-#     fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[rsi]*len(price_data),
-#                              mode='lines', name='RSI', line=dict(color='blue')))
-#     fig.add_trace(go.Scatter(x=list(range(len(price_data))), y=[macd]*len(price_data),
-#                              mode='lines', name='MACD', line=dict(color='red')))
-
-#     # Convert the figure to HTML and mark it as safe
-#     plot_html = pio.to_html(fig, full_html=False)
-#     return mark_safe(plot_html)
-
-# def plot_long_term_analysis_html(symbol, financial_data):
-#     labels = list(financial_data.keys())
-#     values = [financial_data[label] for label in labels]
-
-#     fig = go.Figure([go.Bar(x=labels, y=values, text=values, textposition='auto')])
-
-#     fig.update_layout(title=f"Long-Term Analysis for {symbol}",
-#                       xaxis_title="Financial Metrics",
-#                       yaxis_title="Values")
-
-#     # Convert the figure to HTML and mark it as safe
-#     plot_html = pio.to_html(fig, full_html=False)
-#     return mark_safe(plot_html)
-
 
 def get_scenario_data(request, scenario_id):
     # Use raw SQL to fetch the scenario data

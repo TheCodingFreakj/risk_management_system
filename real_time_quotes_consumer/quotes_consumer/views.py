@@ -602,6 +602,30 @@ def real_time_stock(raw_data, symbol):
     df['time'] = pd.to_datetime(df['time'])
     return plot_graph(df,raw_data, symbol)
 
+class AsyncioLoopContext:
+    def __enter__(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        return self.loop
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type:
+            logger.error(f"Exception in asyncio loop: {exc_value}")
+        self.loop.close()
+        asyncio.set_event_loop(None)
+
+class LogContext:
+    def __init__(self, operation_name):
+        self.operation_name = operation_name
+
+    def __enter__(self):
+        logger.info(f"Starting {self.operation_name}")
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type:
+            logger.error(f"Error in {self.operation_name}: {exc_value}")
+        else:
+            logger.info(f"Finished {self.operation_name}")
 async def fetch_stock_data_from_api(response_queue):
     url = f'http://charts:8005/api/stock-data/'
     async with aiohttp.ClientSession() as session:
@@ -619,17 +643,18 @@ async def fetch_stock_data_from_api(response_queue):
             response_queue.put(None)
 
 def run_fetch_stock_data_in_thread(response_queue):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(fetch_stock_data_from_api(response_queue))
+    with AsyncioLoopContext() as loop:
+        loop.run_until_complete(fetch_stock_data_from_api(response_queue))
+    
+
 def fetch_stock_data():
     response_queue = queue.Queue()
-    thread = threading.Thread(target=run_fetch_stock_data_in_thread, args=(response_queue,))
-    thread.start()
-    thread.join()
+    with LogContext("Fetching Stock Data"):
+        thread = threading.Thread(target=run_fetch_stock_data_in_thread, args=(response_queue,))
+        thread.start()
+        thread.join()
     
     stock_data = response_queue.get()
-    # logger.info(f"stock_data from fetch_stock_data: {stock_data}")
     return stock_data
 
 def plot_graph(df, raw_data=[], symbol=None):

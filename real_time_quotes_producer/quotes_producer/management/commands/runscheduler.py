@@ -6,4 +6,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         start_scheduler()
-        self.stdout.write(self.style.SUCCESS('Scheduler started'))
+        self.stdout.write(self.style.SUCCESS('Scheduler is running...'))

@@ -1,0 +1,12 @@
+Django
+djangorestframework
+psycopg2-binary
+kafka-python
+python-dotenv
+pymongo
+djongo
+celery
+yfinance
+redis
+mongoengine
+scikit-learn

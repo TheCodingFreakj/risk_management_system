@@ -22,7 +22,7 @@ from django.db import connection
 from asgiref.sync import sync_to_async
 from concurrent.futures import ThreadPoolExecutor
 import aiohttp
-import time
+import httpx
 
 # Configure Redis connection
 redis_client = redis.Redis(host='redis', port=6379, db=0)
@@ -41,6 +41,52 @@ async def get_final_context(request):
     final_context = await compute_final_context(symbols, scenarios)
 
     return JsonResponse(final_context)
+
+async def risk_factors(request, portfolio_id):
+    try:
+        logger.debug("Received request for risk factors API")
+        logger.debug(f"Portfolio ID: {portfolio_id}")
+
+        if not portfolio_id:
+            logger.warning("No portfolio_id provided in request.")
+            return JsonResponse({"error": "portfolio_id is required"}, status=400)
+       
+        # Define retry parameters
+        max_retries = 3
+        backoff_factor = 2  # Exponential backoff factor
+
+        # Retry loop
+        for attempt in range(max_retries):
+            try:
+                logger.debug(f"Attempt {attempt + 1}: Making async GET request to risk_services for portfolio_id {portfolio_id}")
+
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(f'http://riskservices:8009/api/risk_exposure_api/{portfolio_id}/')
+                
+                # Check if the request was successful
+                response.raise_for_status()
+                logger.debug(f"Received response with status {response.status_code}")
+
+                # Parse the JSON response
+                data = response.json()
+                logger.debug(f"Response data: {data}")
+
+                return JsonResponse(data)
+
+            except (httpx.HTTPStatusError, httpx.RequestError) as err:
+                logger.error(f"Error occurred: {err}")
+                # Calculate backoff time
+                if attempt < max_retries - 1:
+                    backoff_time = backoff_factor ** attempt
+                    logger.debug(f"Retrying in {backoff_time} seconds...")
+                    await asyncio.sleep(backoff_time)
+                else:
+                    logger.error(f"All retries failed after {max_retries} attempts.")
+                    return JsonResponse({"error": "All connection attempts failed"}, status=500)
+
+    except Exception as err:
+        logger.error(f"An unexpected error occurred: {err}")
+        return JsonResponse({"error": str(err)}, status=500)
 
 async def compute_final_context(symbols, scenarios):
     # Start the analysis for the symbols asynchronously

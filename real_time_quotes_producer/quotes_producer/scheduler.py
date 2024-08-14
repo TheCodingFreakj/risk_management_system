@@ -39,7 +39,7 @@ def call_produce_to_kafka_viewset():
     max_retries = 5
     for attempt in range(max_retries):
         try:
-            response = requests.get(url)
+            response = requests.post(url)
             if response.status_code == 200:
                 logger.info(f"Successfully called produce_to_kafka viewset: {response.json()}")
                 break

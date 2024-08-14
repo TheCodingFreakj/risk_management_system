@@ -7,6 +7,9 @@
     <title>Market Data Handler</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.8/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -22,24 +25,31 @@
             color: #333;
         }
 
-         /* Style the grid container */
-         .grid-container {
+        /* Style the grid container */
+        .grid-container {
             display: grid;
-            grid-template-columns: repeat(2, 1fr); /* Two equal-width columns */
-            grid-gap: 20px; /* Spacing between grid items */
-            margin: 20px 0; /* Margin above and below the grid */
+            grid-template-columns: repeat(2, 1fr);
+            /* Two equal-width columns */
+            grid-gap: 20px;
+            /* Spacing between grid items */
+            margin: 20px 0;
+            /* Margin above and below the grid */
         }
 
         /* Style the individual grid items */
         .grid-item {
             padding: 10px;
-            border: 1px solid #ccc; /* Border around each grid item */
-            border-radius: 5px; /* Rounded corners */
-            background-color: #f9f9f9; /* Background color for grid items */
+            border: 1px solid #ccc;
+            /* Border around each grid item */
+            border-radius: 5px;
+            /* Rounded corners */
+            background-color: #f9f9f9;
+            /* Background color for grid items */
         }
 
         .grid-item h2 {
-            margin-top: 0; /* Remove top margin for h2 in grid items */
+            margin-top: 0;
+            /* Remove top margin for h2 in grid items */
         }
 
         #container {
@@ -65,9 +75,11 @@
             justify-content: space-around;
             flex-wrap: wrap;
         }
+
         div#graphs-container {
-    padding: 40px;
-}
+            padding: 40px;
+        }
+
         .stock-data {
             display: flex;
             justify-content: space-between;
@@ -120,7 +132,7 @@
             gap: 20px;
         }
 
-        
+
         h2,
         h3 {
             margin-top: 0;
@@ -132,208 +144,444 @@
             color: #888;
             margin-top: 50px;
         }
+
         .flex-container-3 {
-    display: flex;
-    justify-content: space-around;
-}
-.loader-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-}
+            display: flex;
+            justify-content: space-around;
+        }
 
-.spinner {
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-left-color: #000;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-}
+        .loader-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #000;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+
+        /* Create a two-column grid */
+        .grid-container2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            /* Two equal columns */
+            gap: 20px;
+            /* Space between the columns */
+            padding: 20px;
+            /* Optional padding around the grid */
+        }
+
+        /* Styling for each grid item */
+        .grid-item2 {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        /* Ensure the charts take up the full width of their grid items */
+        #heatmap,
+        #factorAnalysisChart {
+            width: 100%;
+            height: 100%;
+        }
+
+        #heatmapContainer {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            background-color: rgba(211, 211, 211, 0);
+            margin: 0 auto;
+            border: 1px solid #ccc;
+        }
+        #info {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #chartContainer {
+            width: 80%;
+            height: 400px;
+            margin: 0 auto;
+        }
+        #summary {
+            text-align: center;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <!-- onload="initializePage()" -->
 
 <body onload="initializePage()">
 
-   <div id="main_div">
-    <div id="loader" class="loader-container">
-        <div class="spinner"></div>
-    </div>
-    
-    <div id="container">
-        <h1>Market Data Handler</h1>
-        
-        <div class="flex_container">
-            <button onclick="connectWebSocket()">Connect WebSocket</button>
+    <div id="main_div">
+        <div id="loader" class="loader-container">
+            <div class="spinner"></div>
+        </div>
+
+        <div id="container">
+            <h1>Market Data Handler</h1>
+
+            <div class="flex_container">
+                <button onclick="connectWebSocket()">Connect WebSocket</button>
 
 
-            <select id="scenario-select">
-                <option value="" disabled selected>Select a scenario</option>
-                {% for scenario in scenarios %}
-                <option value="{{ scenario.id }}" data-description="{{ scenario.description }}"
-                    data-impact="{{ scenario.impact_factor }}">
-                    {{ scenario.name }}
-                </option>
-                {% endfor %}
-            </select>
+                <select id="scenario-select">
+                    <option value="" disabled selected>Select a scenario</option>
+                    {% for scenario in scenarios %}
+                    <option value="{{ scenario.id }}" data-description="{{ scenario.description }}"
+                        data-impact="{{ scenario.impact_factor }}">
+                        {{ scenario.name }}
+                    </option>
+                    {% endfor %}
+                </select>
 
-            <div id="scenario-details" style="width: 700px; margin: 0 40px;">
-                <p id="description"></p>
-                <p><strong>Impact Factor:</strong> <span id="impact-factor"></span></p>
+                <div id="scenario-details" style="width: 700px; margin: 0 40px;">
+                    <p id="description"></p>
+                    <p><strong>Impact Factor:</strong> <span id="impact-factor"></span></p>
+                </div>
+            </div>
+
+            <!-- <div id="loader" class="loader-container" style="display: none;"></div> -->
+            <div id="socket-status" style="font-weight: bold;color: rgb(33, 23, 23);position: relative;left: 3%;">
+                Disconnected</div>
+            <div id="cont">
+                <div id="chart1"></div>
+                <div id="chart2"></div>
+                <div id="chart3"></div>
+                <div id="chart4"></div>
+            </div>
+
+            <div class="stock-data">
+                <h3>Stock Data for <span id="latestDate"></span> <span id="symbol"></span></h3>
+                <p>Current Price: <span id="close"></span></p>
+                <p>Day High: <span id="high"></span></p>
+                <p>Day Low: <span id="low"></span></p>
+                <p>Open: <span id="open"></span></p>
+                <p>Previous Close: <span id="previousClose"></span></p>
+                <p>Volume: <span id="volume"></span></p>
+                <p>MarketCap: <span id="marketCap"></span></p>
+                <p>DividendYield: <span id="dividendYield"></span></p>
+                <p>TrailingPE: <span id="trailingPE"></span></p>
+                <p>TrailingEps: <span id="trailingEps"></span></p>
+                <button>Signal: <span id="signalValue"></span></button>
+            </div>
+
+            <div id="chart-container">
+
             </div>
         </div>
 
-        <!-- <div id="loader" class="loader-container" style="display: none;"></div> -->
-        <div id="socket-status" style="font-weight: bold;color: rgb(33, 23, 23);position: relative;left: 3%;">Disconnected</div>
-        <div id="cont">
-            <div id="chart1"></div>
-            <div id="chart2"></div>
-            <div id="chart3"></div>
-            <div id="chart4"></div>
-        </div>
-
-        <div class="stock-data">
-            <h3>Stock Data for <span id="latestDate"></span> <span id="symbol"></span></h3>
-            <p>Current Price: <span id="close"></span></p>
-            <p>Day High: <span id="high"></span></p>
-            <p>Day Low: <span id="low"></span></p>
-            <p>Open: <span id="open"></span></p>
-            <p>Previous Close: <span id="previousClose"></span></p>
-            <p>Volume: <span id="volume"></span></p>
-            <p>MarketCap: <span id="marketCap"></span></p>
-            <p>DividendYield: <span id="dividendYield"></span></p>
-            <p>TrailingPE: <span id="trailingPE"></span></p>
-            <p>TrailingEps: <span id="trailingEps"></span></p>
-            <button>Signal: <span id="signalValue"></span></button>
-        </div>
-
-        <div id="chart-container">
-            
-        </div>
-    </div>
-
-    <div id="graphs-container">
-            <!-- Loader container -->
-    
-     
-    </div>
-
-       
-   
-    
-    <div id="content-container" style="display: none;">
-        <!-- This is where the final content will be loaded -->
-    </div>
-
-    <div id="container">
         <div id="graphs-container">
-                <!-- Loader container -->
-  
+            <!-- Loader container -->
+
 
         </div>
-    </div>
-    </div>
 
 
-    <script>
-document.addEventListener("DOMContentLoaded", function() {
-            // Show the loader
-            const loader = document.getElementById("loader");
-            const contentContainer = document.getElementById("content-container");
 
-            // Fetch the final context
-            fetch("/get-final-context/")  // Adjust the URL according to your routing
-                .then(response => response.json())
-                .then(data => {
-                    // Hide the loader
-                    loader.style.display = "none";
 
-                    // Show the content container
-                    contentContainer.style.display = "block";
+        <div id="content-container" style="display: none;">
+            <!-- This is where the final content will be loaded -->
+        </div>
 
-                    console.log(data.html_entries);
+        <div id="container">
+            <div id="graphs-container">
+                <!-- Loader container -->
 
-                    // Insert the HTML content first
-                    if (data.html_entries) {
-                        data.html_entries.forEach((htmlEntry, index) => {
-                            // Inject the HTML for each plot
-                            contentContainer.innerHTML += htmlEntry;
-                        });
 
-                        // Render the corresponding Plotly plots after the HTML has been injected
-                        Object.keys(data.graphs).forEach((plotDivId) => {
-                            const graphData = data.graphs[plotDivId];
-                            Plotly.newPlot(plotDivId, graphData.data, graphData.layout);
-                        });
-                    } else {
-                        contentContainer.innerHTML = "<p>No data available.</p>";
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching final context:", error);
-                    loader.innerHTML = "<p>Failed to load data. Please try again later.</p>";
-                });
-        });
+            </div>
+        </div>
 
-                // JavaScript to handle loader visibility
-                document.addEventListener("DOMContentLoaded", function() {
-            const loader = document.getElementById('loader');
+        <h2>Risk Exposure Heatmap & Factor Analysis</h2>
 
-            // Check if any of the inner divs have content and hide the loader
-            function checkContentAndHideLoader() {
-                const innerDivs = document.querySelectorAll('#chart1, #chart2, #chart3, #chart4, #graphs-container');
-                let contentLoaded = false;
+        <div class="grid-container2">
+            <!-- Column 1 -->
+            <div class="grid-item2">
+                <div id="heatmapContainer" style="width: 400px; height: 400px; position: relative; background-color: rgba(211, 211, 211, 0.027);"></div>
 
-                innerDivs.forEach(div => {
-                    if (div.innerHTML.trim() !== "") {
-                        contentLoaded = true;
-                    }
-                });
+            </div>
 
-                if (contentLoaded) {
-                    loader.style.display = 'none';
+            <!-- Column 2 -->
+            <div class="grid-item2">
+                <div class="chart-container">
+                    <h2 style="text-align: center;">Unified Risk Factor Visualization</h2>
+                    <div id="summary" class="summary"></div>
+                    <canvas id="unifiedChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const portfolioId = '66bcd06621291346ffea76e5'; // Replace with the actual portfolio ID you want to query
+
+                // Fetch risk exposure and factor contribution data
+                fetch(`/risk_factors/${portfolioId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data.factor_contributions)
+                        renderHeatmap(data.risk_exposure[0]);
+                        renderFactorAnalysisChart(data.factor_contributions);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching data:', error);
+                    });
+            });
+
+            
+
+            function renderHeatmap(risk_exposure) {
+            // Create a heatmap instance
+            var heatmapInstance = h337.create({
+                container: document.getElementById('heatmapContainer'),
+                radius: 50,
+                maxOpacity: .6,
+                minOpacity: .2,
+                blur: .75,
+                backgroundColor: 'transparent'
+            });
+
+            // Calculate dynamic grid size
+            var containerWidth = document.getElementById('heatmapContainer').offsetWidth;
+            var numAssets = risk_exposure.assets.length;
+            var columns = Math.ceil(Math.sqrt(numAssets));
+            var step = containerWidth / columns;
+
+            var max = 0;
+            var points = [];
+            var x = step / 2, y = step / 2; 
+
+            risk_exposure.assets.forEach(function(asset, index) {
+                var value = asset.asset_quantity * asset.current_price;
+                max = Math.max(max, value);
+                points.push({ x: x, y: y, value: value });
+
+                x += step;
+                if ((index + 1) % columns === 0) { 
+                    x = step / 2;
+                    y += step;
                 }
+            });
+
+            var data = {
+                max: max,
+                data: points
+            };
+
+            heatmapInstance.setData(data);
+        }
+
+            function renderFactorAnalysisChart(response) {
+                
+            var factorNames = response.map(item => item.factor_name);
+            var pcaData = response.map(item => item.pca_contributions.reduce((a, b) => a + b, 0));  // Sum of PCA contributions
+            var regressionData = response.map(item => item.regression_contributions.reduce((a, b) => a + b, 0));  // Sum of Regression contributions
+            var sensitivityData = response.map(item => item.sensitivity);
+            var stressTestData = response.map(item => item.stress_test_result);
+            var varData = response.map(item => item.var);
+
+            // Populate summary
+            document.getElementById('summary').innerHTML = `
+                <p><strong>Factors:</strong> ${factorNames.join(", ")}</p>
+                <p><strong>Total Sensitivity:</strong> ${sensitivityData.reduce((a, b) => a + b, 0).toFixed(2)}</p>
+                <p><strong>Total Stress Test Result:</strong> ${stressTestData.reduce((a, b) => a + b, 0).toFixed(2)}</p>
+                <p><strong>Total Value at Risk (VaR):</strong> ${varData.reduce((a, b) => a + b, 0).toFixed(2)}</p>
+            `;
+
+            var ctx = document.getElementById('unifiedChart').getContext('2d');
+            var unifiedChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: factorNames,
+                    datasets: [
+                        {
+                            label: 'PCA Contributions',
+                            data: pcaData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Regression Contributions',
+                            data: regressionData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Sensitivity',
+                            data: sensitivityData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Stress Test Result',
+                            data: stressTestData,
+                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Value at Risk (VaR)',
+                            data: varData,
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Values'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Risk Factors'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        
+        
             }
 
-            // Initial check
-            checkContentAndHideLoader();
 
-            // Periodically check every second
-            setInterval(checkContentAndHideLoader, 1000);
-        });
-        // Function to show the loader
-        function showLoader() {
-            document.getElementById('loader').style.display = 'flex';
-        }
 
-        // Function to hide the loader
-        function hideLoader() {
-            document.getElementById('loader').style.display = 'none';
-        }
-        async function fetchAndUpdateData() {
-            try {
-                const response = await fetch("/load-additional-data/");
-                if (!response.ok) {
-                    throw new Error('Failed to load additional data');
+
+            document.addEventListener("DOMContentLoaded", function () {
+                // Show the loader
+                const loader = document.getElementById("loader");
+                const contentContainer = document.getElementById("content-container");
+
+                // Fetch the final context
+                fetch("/get-final-context/")  // Adjust the URL according to your routing
+                    .then(response => response.json())
+                    .then(data => {
+                        // Hide the loader
+                        loader.style.display = "none";
+
+                        // Show the content container
+                        contentContainer.style.display = "block";
+
+                        console.log(data.html_entries);
+
+                        // Insert the HTML content first
+                        if (data.html_entries) {
+                            data.html_entries.forEach((htmlEntry, index) => {
+                                // Inject the HTML for each plot
+                                contentContainer.innerHTML += htmlEntry;
+                            });
+
+                            // Render the corresponding Plotly plots after the HTML has been injected
+                            Object.keys(data.graphs).forEach((plotDivId) => {
+                                const graphData = data.graphs[plotDivId];
+                                Plotly.newPlot(plotDivId, graphData.data, graphData.layout);
+                            });
+                        } else {
+                            contentContainer.innerHTML = "<p>No data available.</p>";
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching final context:", error);
+                        loader.innerHTML = "<p>Failed to load data. Please try again later.</p>";
+                    });
+            });
+
+            // JavaScript to handle loader visibility
+            document.addEventListener("DOMContentLoaded", function () {
+                const loader = document.getElementById('loader');
+
+                // Check if any of the inner divs have content and hide the loader
+                function checkContentAndHideLoader() {
+                    const innerDivs = document.querySelectorAll('#chart1, #chart2, #chart3, #chart4, #graphs-container');
+                    let contentLoaded = false;
+
+                    innerDivs.forEach(div => {
+                        if (div.innerHTML.trim() !== "") {
+                            contentLoaded = true;
+                        }
+                    });
+
+                    if (contentLoaded) {
+                        loader.style.display = 'none';
+                    }
                 }
-                const data = await response.json();
-                console.log("..............................")
-                // Inject the graphs and html_output content
-                const dynamicContent = document.getElementById("graphs-container");
 
-                
-                if (data.graphs) {
-                    for (const [ticker, graphData] of Object.entries(data.graphs)) {
-                        const graphContainer = document.createElement('div');
-                        graphContainer.classList.add('graph-container');
-                        graphContainer.innerHTML = `
+                // Initial check
+                checkContentAndHideLoader();
+
+                // Periodically check every second
+                setInterval(checkContentAndHideLoader, 1000);
+            });
+            // Function to show the loader
+            function showLoader() {
+                document.getElementById('loader').style.display = 'flex';
+            }
+
+            // Function to hide the loader
+            function hideLoader() {
+                document.getElementById('loader').style.display = 'none';
+            }
+            async function fetchAndUpdateData() {
+                try {
+                    const response = await fetch("/load-additional-data/");
+                    if (!response.ok) {
+                        throw new Error('Failed to load additional data');
+                    }
+                    const data = await response.json();
+                    console.log("..............................")
+                    // Inject the graphs and html_output content
+                    const dynamicContent = document.getElementById("graphs-container");
+
+
+                    if (data.graphs) {
+                        for (const [ticker, graphData] of Object.entries(data.graphs)) {
+                            const graphContainer = document.createElement('div');
+                            graphContainer.classList.add('graph-container');
+                            graphContainer.innerHTML = `
                         <h2>${ticker} - Your Risk Management</h2>
                         ${graphData.var_value !== undefined ? `
                             <div class="graph-container">
@@ -346,169 +594,169 @@ document.addEventListener("DOMContentLoaded", function() {
                                 <p style="font-weight: bold;">Probable Decision:</p>
                                 <p style="font-weight: bold;">${graphData.decision}</p>
                             </div>` : ''
-                            }
+                                }
                         <div class="flex-container-3"> 
                         ${graphData.daily_returns_div ? `<div class="graph-container2"><h3>Daily Returns</h3>${graphData.daily_returns_div}</div>` : ''}
                         ${graphData.portfolio_returns_div ? `<div class="graph-container2"><h3>Portfolio Returns</h3>${graphData.portfolio_returns_div}</div>` : ''}
                         </div>
                     `;
-                        dynamicContent.appendChild(graphContainer);
+                            dynamicContent.appendChild(graphContainer);
 
-                        // Execute any inline scripts found in the graph data
-                        executeScripts(graphContainer);
-                    }
-                }
-
-                lastFetchFailed = false; // Mark the last fetch as successful
-            } catch (error) {
-                console.error('Error during incremental loading:', error);
-                document.getElementById("loading-message").innerText = "Failed to load data. Please try again later.";
-                lastFetchFailed = true; // Mark the last fetch as failed
-            } finally {
-                isFetching = false; // Reset the flag once the fetch is complete
-            }
-        }
-
-        // Function to execute scripts within dynamically inserted HTML
-        function executeScripts(container) {
-            const scripts = container.getElementsByTagName('script');
-            for (const script of scripts) {
-                const newScript = document.createElement('script');
-                if (script.src) {
-                    newScript.src = script.src;
-                } else {
-                    newScript.textContent = script.textContent;
-                }
-                document.head.appendChild(newScript).parentNode.removeChild(newScript);
-            }
-        }
-        async function initializePage() {
-            document.getElementById('scenario-select').addEventListener('change', handleScenarioChange);
-            await connectWebSocket();
-            await fetchAndUpdateData();
-           
-        }
-
-        function handleScenarioChange() {
-            const selectedOption = this.options[this.selectedIndex];
-            const description = selectedOption.getAttribute('data-description');
-            const impactFactor = selectedOption.getAttribute('data-impact');
-
-            document.getElementById('description').innerText = description;
-            document.getElementById('impact-factor').innerText = impactFactor;
-
-            fetchScenarioData(this.value);
-        }
-
-        async function fetchScenarioData(scenarioId) {
-            try {
-                const response = await fetch(`/get-scenario-data/${scenarioId}/`);
-                const data = await response.json();
-                if (response.ok) {
-                    renderCharts(data);
-                } else {
-
-                    console.error('Error fetching scenario data:', response.statusText);
-                }
-            } catch (error) {
-                console.error('Error fetching scenario data:', error);
-            }
-        }
-
-        function renderCharts(data) {
-            Plotly.newPlot('chart1', JSON.parse(data.chart1).data, JSON.parse(data.chart1).layout);
-            Plotly.newPlot('chart2', JSON.parse(data.chart2).data, JSON.parse(data.chart2).layout);
-            Plotly.newPlot('chart3', JSON.parse(data.chart3).data, JSON.parse(data.chart3).layout);
-            Plotly.newPlot('chart4', JSON.parse(data.chart4).data, JSON.parse(data.chart4).layout);
-        }
-
-        function connectWebSocket() {
-            const socketStatus = document.getElementById('socket-status');
-            socketStatus.innerText = 'Connecting...'; // Indicate that the WebSocket is connecting
-            socketStatus.style.color = 'orange';
-
-            const socket = new WebSocket('ws://' + window.location.host + '/ws/quotes/');
-
-            socket.onmessage = async function (e) {
-                const data = JSON.parse(e.data);
-                updateStockData(data.quote);
-                await fetchChartData(data.quote.symbol);
-            };
-
-            socket.onclose = function (e) {
-                console.error('WebSocket closed unexpectedly');
-                socketStatus.innerText = 'Disconnected';
-                socketStatus.style.color = 'red';
-            };
-
-            socket.onopen = function (e) {
-                console.log('WebSocket connection opened');
-                socketStatus.innerText = 'Connected';
-                socketStatus.style.color = 'green';
-            };
-
-            socket.onerror = function (e) {
-                console.error('WebSocket error:', e);
-                socketStatus.innerText = 'Error';
-                socketStatus.style.color = 'red';
-            };
-        }
-
-
-        function updateStockData(quote) {
-            document.getElementById('signalValue').innerText = quote.signal || '-';
-            document.getElementById('symbol').innerText = quote.symbol || '-';
-            document.getElementById('close').innerText = quote.data.currentPrice || '-';
-            document.getElementById('high').innerText = quote.data.dayHigh || '-';
-            document.getElementById('low').innerText = quote.data.dayLow || '-';
-            document.getElementById('open').innerText = quote.data.open || '-';
-            document.getElementById('previousClose').innerText = quote.data.previousClose || '-';
-            document.getElementById('volume').innerText = quote.data.volume || '-';
-            document.getElementById('marketCap').innerText = quote.data.marketCap || '-';
-            document.getElementById('dividendYield').innerText = quote.data.dividendYield || '-';
-            document.getElementById('trailingPE').innerText = quote.data.trailingPE || '-';
-            document.getElementById('trailingEps').innerText = quote.data.trailingEps || '-';
-            document.getElementById('latestDate').innerText = quote.data.latestDate || '-';
-        }
-
-        async function fetchChartData(symbolUpper) {
-            try {
-                const response = await fetch('/chart-data/');
-                const data = await response.json();
-
-                if (response.ok) {
-                    for (const [symbol, chartHtml] of Object.entries(data)) {
-                        if (symbolUpper === symbol) {
-                            showChart(chartHtml);
-                            break;
+                            // Execute any inline scripts found in the graph data
+                            executeScripts(graphContainer);
                         }
                     }
-                } else {
-                    console.error('Error fetching chart data:', response.statusText);
+
+                    lastFetchFailed = false; // Mark the last fetch as successful
+                } catch (error) {
+                    console.error('Error during incremental loading:', error);
+                    document.getElementById("loading-message").innerText = "Failed to load data. Please try again later.";
+                    lastFetchFailed = true; // Mark the last fetch as failed
+                } finally {
+                    isFetching = false; // Reset the flag once the fetch is complete
                 }
-            } catch (error) {
-                console.error('Error fetching chart data:', error);
             }
-        }
 
-        function showChart(chartHtml) {
-            const container = document.getElementById('chart-container');
-            container.innerHTML = chartHtml;
-
-            const scripts = container.getElementsByTagName('script');
-            for (const script of scripts) {
-                const newScript = document.createElement('script');
-                if (script.src) {
-                    newScript.src = script.src;
-                } else {
-                    newScript.textContent = script.textContent;
+            // Function to execute scripts within dynamically inserted HTML
+            function executeScripts(container) {
+                const scripts = container.getElementsByTagName('script');
+                for (const script of scripts) {
+                    const newScript = document.createElement('script');
+                    if (script.src) {
+                        newScript.src = script.src;
+                    } else {
+                        newScript.textContent = script.textContent;
+                    }
+                    document.head.appendChild(newScript).parentNode.removeChild(newScript);
                 }
-                document.head.appendChild(newScript).parentNode.removeChild(newScript);
             }
-        }
+            async function initializePage() {
+                document.getElementById('scenario-select').addEventListener('change', handleScenarioChange);
+                await connectWebSocket();
+                await fetchAndUpdateData();
 
-       
-    </script>
+            }
+
+            function handleScenarioChange() {
+                const selectedOption = this.options[this.selectedIndex];
+                const description = selectedOption.getAttribute('data-description');
+                const impactFactor = selectedOption.getAttribute('data-impact');
+
+                document.getElementById('description').innerText = description;
+                document.getElementById('impact-factor').innerText = impactFactor;
+
+                fetchScenarioData(this.value);
+            }
+
+            async function fetchScenarioData(scenarioId) {
+                try {
+                    const response = await fetch(`/get-scenario-data/${scenarioId}/`);
+                    const data = await response.json();
+                    if (response.ok) {
+                        renderCharts(data);
+                    } else {
+
+                        console.error('Error fetching scenario data:', response.statusText);
+                    }
+                } catch (error) {
+                    console.error('Error fetching scenario data:', error);
+                }
+            }
+
+            function renderCharts(data) {
+                Plotly.newPlot('chart1', JSON.parse(data.chart1).data, JSON.parse(data.chart1).layout);
+                Plotly.newPlot('chart2', JSON.parse(data.chart2).data, JSON.parse(data.chart2).layout);
+                Plotly.newPlot('chart3', JSON.parse(data.chart3).data, JSON.parse(data.chart3).layout);
+                Plotly.newPlot('chart4', JSON.parse(data.chart4).data, JSON.parse(data.chart4).layout);
+            }
+
+            function connectWebSocket() {
+                const socketStatus = document.getElementById('socket-status');
+                socketStatus.innerText = 'Connecting...'; // Indicate that the WebSocket is connecting
+                socketStatus.style.color = 'orange';
+
+                const socket = new WebSocket('ws://' + window.location.host + '/ws/quotes/');
+
+                socket.onmessage = async function (e) {
+                    const data = JSON.parse(e.data);
+                    updateStockData(data.quote);
+                    await fetchChartData(data.quote.symbol);
+                };
+
+                socket.onclose = function (e) {
+                    console.error('WebSocket closed unexpectedly');
+                    socketStatus.innerText = 'Disconnected';
+                    socketStatus.style.color = 'red';
+                };
+
+                socket.onopen = function (e) {
+                    console.log('WebSocket connection opened');
+                    socketStatus.innerText = 'Connected';
+                    socketStatus.style.color = 'green';
+                };
+
+                socket.onerror = function (e) {
+                    console.error('WebSocket error:', e);
+                    socketStatus.innerText = 'Error';
+                    socketStatus.style.color = 'red';
+                };
+            }
+
+
+            function updateStockData(quote) {
+                document.getElementById('signalValue').innerText = quote.signal || '-';
+                document.getElementById('symbol').innerText = quote.symbol || '-';
+                document.getElementById('close').innerText = quote.data.currentPrice || '-';
+                document.getElementById('high').innerText = quote.data.dayHigh || '-';
+                document.getElementById('low').innerText = quote.data.dayLow || '-';
+                document.getElementById('open').innerText = quote.data.open || '-';
+                document.getElementById('previousClose').innerText = quote.data.previousClose || '-';
+                document.getElementById('volume').innerText = quote.data.volume || '-';
+                document.getElementById('marketCap').innerText = quote.data.marketCap || '-';
+                document.getElementById('dividendYield').innerText = quote.data.dividendYield || '-';
+                document.getElementById('trailingPE').innerText = quote.data.trailingPE || '-';
+                document.getElementById('trailingEps').innerText = quote.data.trailingEps || '-';
+                document.getElementById('latestDate').innerText = quote.data.latestDate || '-';
+            }
+
+            async function fetchChartData(symbolUpper) {
+                try {
+                    const response = await fetch('/chart-data/');
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        for (const [symbol, chartHtml] of Object.entries(data)) {
+                            if (symbolUpper === symbol) {
+                                showChart(chartHtml);
+                                break;
+                            }
+                        }
+                    } else {
+                        console.error('Error fetching chart data:', response.statusText);
+                    }
+                } catch (error) {
+                    console.error('Error fetching chart data:', error);
+                }
+            }
+
+            function showChart(chartHtml) {
+                const container = document.getElementById('chart-container');
+                container.innerHTML = chartHtml;
+
+                const scripts = container.getElementsByTagName('script');
+                for (const script of scripts) {
+                    const newScript = document.createElement('script');
+                    if (script.src) {
+                        newScript.src = script.src;
+                    } else {
+                        newScript.textContent = script.textContent;
+                    }
+                    document.head.appendChild(newScript).parentNode.removeChild(newScript);
+                }
+            }
+
+
+        </script>
 </body>
 
 </html>

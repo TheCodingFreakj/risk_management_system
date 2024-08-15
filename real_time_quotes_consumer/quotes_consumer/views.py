@@ -61,7 +61,7 @@ async def risk_factors(request, portfolio_id):
                 logger.debug(f"Attempt {attempt + 1}: Making async GET request to risk_services for portfolio_id {portfolio_id}")
 
                 async with httpx.AsyncClient() as client:
-                    response = await client.get(f'http://riskservices:8009/api/risk_exposure_api/{portfolio_id}/')
+                    response = await client.get(f'http://riskservices:8009/api/portfolio_performance/{portfolio_id}/')
                 
                 # Check if the request was successful
                 response.raise_for_status()

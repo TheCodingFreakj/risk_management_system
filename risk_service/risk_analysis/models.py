@@ -10,9 +10,11 @@ class Portfolios(Document):
     created_at = DateTimeField()
 
 
+
+
 class FactorContributions(Document):
     _id = ObjectIdField(primary_key=True)  # MongoDB ObjectId as the primary key
-    user_id = ObjectIdField(required=True)
+    user_id = StringField(required=True)  # Storing the user ID as a string
     portfolio_id = ObjectIdField(required=True)  # Storing the portfolio's ObjectId
     risk_factor_id = ObjectIdField(required=True)  # Storing the risk factor's ObjectId
     factor_name = StringField(max_length=200)  # Name of the risk factor
@@ -20,9 +22,10 @@ class FactorContributions(Document):
     sensitivity = FloatField()  # Sensitivity analysis result for the factor
     stress_test_result = FloatField()  # Stress testing result for the factor
     regression_contributions = ListField(FloatField())  # Coefficients from Regression Analysis
-    pca_contributions = ListField(FloatField())  # Explained variance ratios from PCA
-    variance_contributions = ListField(FloatField())  # Contributions from Variance Decomposition
+    pca_contributions = ListField(ListField(FloatField()))  # Nested array structure for PCA contributions
+    variance_contributions = FloatField()  # Contributions from Variance Decomposition
     timestamp = DateTimeField()  # Timestamp of the contribution
+
 
 class RiskFactors(Document):
     _id = ObjectIdField(primary_key=True)  # MongoDB ObjectId as the primary key

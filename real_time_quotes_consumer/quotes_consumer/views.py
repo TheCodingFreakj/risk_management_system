@@ -1,7 +1,9 @@
 import math
+import os
 import random
-from django.http import JsonResponse
-from django.shortcuts import render
+import uuid
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerError, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 import numpy as np
 import plotly.graph_objects as go
 import pandas as pd
@@ -22,6 +24,7 @@ from django.db import connection
 from asgiref.sync import sync_to_async
 from concurrent.futures import ThreadPoolExecutor
 import aiohttp
+from django.views.decorators.csrf import csrf_exempt
 import httpx
 
 # Configure Redis connection
@@ -113,7 +116,165 @@ async def compute_final_context(symbols, scenarios):
         'graphs': graph_data
     }
 
+
+
+
+def run_backtest(request, strategy_id):
+    if request.method == 'POST':
+        try:
+            # External service URL to get strategy configuration
+            strategy_url = f"http://tradingplatform:8010/api/strategy/{strategy_id}/"
+
+            # Fetch the strategy configuration from the external service
+            strategy_response = requests.get(strategy_url)
+            if strategy_response.status_code == 200:
+                strategy_data = strategy_response.json()
+            else:
+                return JsonResponse({'success': False, 'error': 'Strategy not found'}, status=404)
+
+            # Extract strategy details
+            algorithm_name = strategy_data.get('name', 'SimpleMovingAverage')
+            start_date = strategy_data.get('start_date', '2024-01-01')
+            end_date = strategy_data.get('end_date', '2024-06-01')
+
+            # Generate a unique identifier for the backtest
+            backtest_id = str(uuid.uuid4())
+
+            # Prepare the configuration file dynamically
+            config_data = {
+                "algorithm-type-name": algorithm_name,
+                "algorithm-language": "Python",
+                "data-folder": "./Data",
+                "results-folder": f"./Results/{backtest_id}",
+                "log-folder": "./Logs",
+                "live-mode": False,
+                "backtest-start-date": start_date,
+                "backtest-end-date": end_date
+            }
+            # Save the configuration file locally
+            local_config_file_path = '/tmp/lean_config.json'
+            with open(local_config_file_path, 'w') as f:
+                json.dump(config_data, f, indent=4)
+
+            # Trigger the Lean Engine backtest via HTTP request
+            lean_service_url = "http://tradingplatform:8010/run_backtest/"
+            files = {'config_file': open(local_config_file_path, 'rb')}
+            response = requests.post(lean_service_url, files=files)
+
+            if response.status_code == 200:
+                backtest_results = response.json()
+            else:
+                return JsonResponse({'success': False, 'error': f"Failed to trigger backtest: {response.text.strip()}"}, status=500)
+
+            # Prepare the data to be sent to the external service for saving the backtest
+            backtest_data = {
+                "strategy_id": strategy_id,
+                "equity_curve": backtest_results.get("equity_curve", []),
+                "sharpe_ratio": backtest_results.get("sharpe_ratio", 0.0),
+                "max_drawdown": backtest_results.get("max_drawdown", 0.0),
+                "total_return": backtest_results.get("total_return", 0.0),
+                "start_date": backtest_results.get("start_date", ""),
+                "end_date": backtest_results.get("end_date", ""),
+            }
+
+            # Send the data to the external service
+            external_service_url = "http://tradingplatform:8010/api/save_backtest/"
+            response = requests.post(external_service_url, json=backtest_data)
+
+            # Check the response from the external service
+            if response.status_code == 200:
+                result_id = response.json().get("result_id")
+                return JsonResponse({'success': True, 'result_id': result_id})
+            else:
+                return JsonResponse({'success': False, 'error': f"Failed to save backtest results: {response.text.strip()}"}, status=500)
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f"An error occurred: {str(e)}"}, status=500)
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def receive_request(request):
+    print(f"request.POST-------------> {request.POST}")
+    
+    if request.method == 'POST':
+
+        data = json.loads(request.body)
+        print(data)  # Debugging: Print the data to ensure it's being received correctly
+
+        # Extract individual fields from the parsed data
+        name = data.get('name')
+        short_ma_period = data.get('short_ma_period')
+        long_ma_period = data.get('long_ma_period')
+        stop_loss = data.get('stop_loss')
+        take_profit = data.get('take_profit')
+        max_drawdown = data.get('max_drawdown')
+        # Capture parameters from the frontend request
+        params = {
+            'name': name,
+            'short_ma_period': short_ma_period,
+            'long_ma_period': long_ma_period,
+            'stop_loss': stop_loss,
+            'take_profit': take_profit,
+            'max_drawdown': max_drawdown
+        }
+
+        print(f"params---------------------> {params}")
+
+        # Pass the parameters to Service B
+        service_b_url = "http://tradingplatform:8010/store_strategy/"
+        response = requests.post(service_b_url, data=params)
+
+        if response.status_code == 200:
+            return JsonResponse({'status': 'success', 'message': 'Strategy created successfully in Service B'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Failed to create strategy in Service B'})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+
+def view_results(request, result_id):
+    # External service URL for backtest results
+    result_url = f"http://tradingplatform:8010/api/backtest/{result_id}/"
+
+    # Fetch backtest result details
+    result_response = requests.get(result_url)
+    if result_response.status_code == 200:
+        result_data = result_response.json()
+    else:
+        return HttpResponseNotFound("Backtest result not found")
+
+    return render(request, 'quotes_consumer/view_results.html', {'result': result_data})
+
+def view_strategy(request, strategy_id):
+    # External service URLs
+    strategy_url = f"http://tradingplatform:8010/api/strategy/{strategy_id}/"
+    backtests_url = f"http://tradingplatform:8010/api/strategy/{strategy_id}/backtests/"
+
+    # Fetch strategy details
+    strategy_response = requests.get(strategy_url)
+    if strategy_response.status_code == 200:
+        strategy_data = strategy_response.json()
+    else:
+        return HttpResponseNotFound("Strategy not found")
+
+    # Fetch related backtests
+    backtests_response = requests.get(backtests_url)
+    if backtests_response.status_code == 200:
+        backtests_data = backtests_response.json()
+    else:
+        backtests_data = []
+
+    return render(request, 'quotes_consumer/view_strategy.html', {
+        'strategy': strategy_data,
+        'backtests': backtests_data
+    })
+
+
+
+
 def index(request):
+
     return render(request, 'quotes_consumer/index.html')
     
 async def load_additional_data(request):

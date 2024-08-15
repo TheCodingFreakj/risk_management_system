@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backtest Result</title>
+</head>
+<body>
+    <h1>Backtest Result for Strategy ID {{ result.strategy }}</h1>
+    <p>Total Return: {{ result.total_return }}%</p>
+    <p>Sharpe Ratio: {{ result.sharpe_ratio }}</p>
+    <p>Max Drawdown: {{ result.max_drawdown }}%</p>
+
+    <h2>Equity Curve</h2>
+    <ul>
+        {% for value in result.equity_curve %}
+        <li>{{ value }}</li>
+        {% endfor %}
+    </ul>
+
+    <a href="{% url 'view_strategy' strategy_id=result.strategy %}">Back to Strategy</a>
+</body>
+</html>

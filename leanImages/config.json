@@ -21,6 +21,7 @@
     "version-id": "1.0", 
     "cache-location": "/Lean/Cache", 
     "lean-manager-type": "LocalLeanManager",
+    "log-level": "debug",
     "parameters": {
         "ShortMAPeriod": "50",
         "LongMAPeriod": "200",

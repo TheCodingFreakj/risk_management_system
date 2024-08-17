@@ -1,0 +1,31 @@
+{
+    "environment": "backtesting",
+    "algorithm-type-name": "MovingAverageCrossAlgorithm",
+    "algorithm-language": "Python",
+    "data-folder": "/Lean/Data",
+    "result-handler": "QuantConnect.Lean.Engine.Results.BacktestingResultHandler",
+    "real-time-handler": "QuantConnect.Lean.Engine.RealTime.BacktestingRealTimeHandler",
+    "transaction-handler": "QuantConnect.Lean.Engine.TransactionHandlers.BacktestingTransactionHandler",
+    "data-feed-handler": "QuantConnect.Lean.Engine.DataFeeds.FileSystemDataFeed",
+    "setup-handler": "QuantConnect.Lean.Engine.Setup.BacktestingSetupHandler",
+    "results-destination-folder": "/Lean/Results",
+    "plugin-directory": "/Lean/Plugins",
+    "composer-dll-directory": "/Lean",
+    "log-handler": "ConsoleLogHandler",
+    "job-queue-handler": "QuantConnect.Queues.JobQueue",
+    "algorithm-location": "/Lean/Algorithm.Python/MovingAverageCrossAlgorithm.py",
+    "api-handler": "QuantConnect.Api.Api",
+    "api-access-token": "",
+    "job-organization-id": "",
+    "messaging-handler": "QuantConnect.Messaging.Messaging", 
+    "version-id": "1.0", 
+    "cache-location": "/Lean/Cache", 
+    "lean-manager-type": "LocalLeanManager",
+    "parameters": {
+        "ShortMAPeriod": "50",
+        "LongMAPeriod": "200",
+        "StartDate": "2023-01-01",
+        "EndDate": "2023-12-31",
+        "InitialCash": "100000"
+    }
+}

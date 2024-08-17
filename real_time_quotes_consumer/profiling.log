@@ -1,0 +1,233 @@
+2024-08-15 23:46:08,417 - django.utils.autoreload - INFO - Watching for file changes with StatReloader
+2024-08-15 23:47:11,643 - yfinance - DEBUG - Entering history()
+2024-08-15 23:47:11,661 - peewee - DEBUG - ('CREATE TABLE IF NOT EXISTS "_kv" ("key" VARCHAR(255) NOT NULL PRIMARY KEY, "value" VARCHAR(255)) WITHOUT ROWID', [])
+2024-08-15 23:47:11,674 - peewee - DEBUG - ('SELECT "t1"."key", "t1"."value" FROM "_kv" AS "t1" WHERE ("t1"."key" = ?) LIMIT ? OFFSET ?', ['GOOGL', 1, 0])
+2024-08-15 23:47:11,674 - yfinance - DEBUG -  Entering _fetch_ticker_tz()
+2024-08-15 23:47:11,675 - yfinance - DEBUG -   Entering get()
+2024-08-15 23:47:11,675 - yfinance - DEBUG - url=https://query2.finance.yahoo.com/v8/finance/chart/GOOGL
+2024-08-15 23:47:11,675 - yfinance - DEBUG - params=frozendict.frozendict({'range': '1d', 'interval': '1d'})
+2024-08-15 23:47:11,675 - yfinance - DEBUG -    Entering _get_cookie_and_crumb()
+2024-08-15 23:47:11,675 - yfinance - DEBUG - cookie_mode = 'basic'
+2024-08-15 23:47:11,675 - yfinance - DEBUG -     Entering _get_cookie_and_crumb_basic()
+2024-08-15 23:47:11,680 - peewee - DEBUG - ('CREATE TABLE IF NOT EXISTS "_cookieschema" ("strategy" VARCHAR(255) NOT NULL PRIMARY KEY, "fetch_date" DATETIME NOT NULL, "cookie_bytes" BLOB NOT NULL) WITHOUT ROWID', [])
+2024-08-15 23:47:11,691 - peewee - DEBUG - ('SELECT "t1"."strategy", "t1"."fetch_date", "t1"."cookie_bytes" FROM "_cookieschema" AS "t1" WHERE ("t1"."strategy" = ?) LIMIT ? OFFSET ?', ['basic', 1, 0])
+2024-08-15 23:47:11,691 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): fc.yahoo.com:443
+2024-08-15 23:47:14,103 - urllib3.connectionpool - DEBUG - https://fc.yahoo.com:443 "GET / HTTP/1.1" 404 4742
+2024-08-15 23:47:14,103 - peewee - DEBUG - ('DELETE FROM "_cookieschema" WHERE ("_cookieschema"."strategy" = ?)', ['basic'])
+2024-08-15 23:47:14,103 - peewee - DEBUG - ('BEGIN', None)
+2024-08-15 23:47:14,103 - peewee - DEBUG - ('INSERT INTO "_cookieschema" ("strategy", "fetch_date", "cookie_bytes") VALUES (?, ?, ?)', ['basic', '2024-08-15T23:47:14.103360', <memory at 0x000002797EA8B880>])
+2024-08-15 23:47:14,103 - yfinance - DEBUG - fetched basic cookie = <Cookie A3=d=AQABBClGvmYCEMH_0P95wAnUdffwGR6M0BsFEgEBAQGXv2bIZlkbyyMA_eMAAA&S=AQAAAvlTSqzqFGoH7sdmukCfYLM for .yahoo.com/>
+2024-08-15 23:47:14,103 - yfinance - DEBUG - reusing cookie
+2024-08-15 23:47:14,103 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): query1.finance.yahoo.com:443
+2024-08-15 23:47:14,820 - urllib3.connectionpool - DEBUG - https://query1.finance.yahoo.com:443 "GET /v1/test/getcrumb HTTP/1.1" 200 11
+2024-08-15 23:47:14,820 - yfinance - DEBUG - crumb = '5uc4RJ9pgkm'
+2024-08-15 23:47:14,820 - yfinance - DEBUG -     Exiting _get_cookie_and_crumb_basic()
+2024-08-15 23:47:14,834 - yfinance - DEBUG -    Exiting _get_cookie_and_crumb()
+2024-08-15 23:47:14,835 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): query2.finance.yahoo.com:443
+2024-08-15 23:47:15,890 - urllib3.connectionpool - DEBUG - https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/GOOGL?range=1d&interval=1d&crumb=5uc4RJ9pgkm HTTP/1.1" 200 1182
+2024-08-15 23:47:15,891 - yfinance - DEBUG - response code=200
+2024-08-15 23:47:15,891 - yfinance - DEBUG -   Exiting get()
+2024-08-15 23:47:15,891 - yfinance - DEBUG -  Exiting _fetch_ticker_tz()
+2024-08-15 23:47:18,595 - peewee - DEBUG - ('BEGIN', None)
+2024-08-15 23:47:18,596 - peewee - DEBUG - ('INSERT INTO "_kv" ("key", "value") VALUES (?, ?)', ['GOOGL', 'America/New_York'])
+2024-08-15 23:47:18,598 - yfinance - DEBUG -  Entering history()
+2024-08-15 23:47:18,612 - yfinance - DEBUG - GOOGL: Yahoo GET parameters: {'period1': '2023-08-16 00:00:00-04:00', 'period2': '2024-08-15 00:00:00-04:00', 'interval': '1d', 'includePrePost': False, 'events': 'div,splits,capitalGains'}
+2024-08-15 23:47:18,614 - yfinance - DEBUG -   Entering get()
+2024-08-15 23:47:18,615 - yfinance - DEBUG - url=https://query2.finance.yahoo.com/v8/finance/chart/GOOGL
+2024-08-15 23:47:18,615 - yfinance - DEBUG - params=frozendict.frozendict({'period1': 1692158400, 'period2': 1723694400, 'interval': '1d', 'includePrePost': False, 'events': 'div,splits,capitalGains'})
+2024-08-15 23:47:18,615 - yfinance - DEBUG -    Entering _get_cookie_and_crumb()
+2024-08-15 23:47:18,616 - yfinance - DEBUG - cookie_mode = 'basic'
+2024-08-15 23:47:18,616 - yfinance - DEBUG -     Entering _get_cookie_and_crumb_basic()
+2024-08-15 23:47:18,616 - yfinance - DEBUG - reusing cookie
+2024-08-15 23:47:18,616 - yfinance - DEBUG - reusing crumb
+2024-08-15 23:47:18,617 - yfinance - DEBUG -     Exiting _get_cookie_and_crumb_basic()
+2024-08-15 23:47:18,617 - yfinance - DEBUG -    Exiting _get_cookie_and_crumb()
+2024-08-15 23:47:18,960 - urllib3.connectionpool - DEBUG - https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/GOOGL?period1=1692158400&period2=1723694400&interval=1d&includePrePost=False&events=div%2Csplits%2CcapitalGains&crumb=5uc4RJ9pgkm HTTP/1.1" 200 None
+2024-08-15 23:47:18,960 - yfinance - DEBUG - response code=200
+2024-08-15 23:47:18,960 - yfinance - DEBUG -   Exiting get()
+2024-08-15 23:47:18,980 - yfinance - DEBUG - GOOGL: yfinance received OHLC data: 2023-08-16 13:30:00 -> 2024-08-14 13:30:00
+2024-08-15 23:47:18,983 - yfinance - DEBUG - GOOGL: OHLC after cleaning: 2023-08-16 09:30:00-04:00 -> 2024-08-14 09:30:00-04:00
+2024-08-15 23:47:19,008 - yfinance - DEBUG - GOOGL: OHLC after combining events: 2023-08-16 00:00:00-04:00 -> 2024-08-14 00:00:00-04:00
+2024-08-15 23:47:19,011 - yfinance - DEBUG - GOOGL: yfinance returning OHLC: 2023-08-16 00:00:00-04:00 -> 2024-08-14 00:00:00-04:00
+2024-08-15 23:47:19,015 - yfinance - DEBUG -  Exiting history()
+2024-08-15 23:47:19,015 - yfinance - DEBUG - Exiting history()
+2024-08-15 23:47:19,027 - root - DEBUG - The historic data total_historical_data ----------------->                                  Open        High         Low  ...  Dividends  Stock Splits  symbol
+Date                                                           ...                                 
+2023-08-16 00:00:00-04:00  128.552460  130.130650  127.723417  ...        0.0           0.0   GOOGL
+2023-08-17 00:00:00-04:00  129.651200  131.838691  129.141774  ...        0.0           0.0   GOOGL
+2023-08-18 00:00:00-04:00  128.362673  129.101830  126.235117  ...        0.0           0.0   GOOGL
+2023-08-21 00:00:00-04:00  127.034209  128.582427  126.414917  ...        0.0           0.0   GOOGL
+2023-08-22 00:00:00-04:00  128.362668  130.130643  128.172899  ...        0.0           0.0   GOOGL
+...                               ...         ...         ...  ...        ...           ...     ...
+2024-08-08 00:00:00-04:00  160.509995  163.690002  160.210007  ...        0.0           0.0   GOOGL
+2024-08-09 00:00:00-04:00  160.009995  163.789993  159.059998  ...        0.0           0.0   GOOGL
+2024-08-12 00:00:00-04:00  164.350006  164.899994  161.839996  ...        0.0           0.0   GOOGL
+2024-08-13 00:00:00-04:00  163.410004  164.729996  162.970001  ...        0.0           0.0   GOOGL
+2024-08-14 00:00:00-04:00  162.399994  163.220001  157.710007  ...        0.0           0.0   GOOGL
+
+[251 rows x 8 columns]
+2024-08-15 23:47:40,614 - yfinance - DEBUG - Entering history()
+2024-08-15 23:47:40,614 - peewee - DEBUG - ('SELECT "t1"."key", "t1"."value" FROM "_kv" AS "t1" WHERE ("t1"."key" = ?) LIMIT ? OFFSET ?', ['AMZN', 1, 0])
+2024-08-15 23:47:40,614 - yfinance - DEBUG -  Entering _fetch_ticker_tz()
+2024-08-15 23:47:40,614 - yfinance - DEBUG -   Entering get()
+2024-08-15 23:47:40,614 - yfinance - DEBUG - url=https://query2.finance.yahoo.com/v8/finance/chart/AMZN
+2024-08-15 23:47:40,614 - yfinance - DEBUG - params=frozendict.frozendict({'range': '1d', 'interval': '1d'})
+2024-08-15 23:47:40,614 - yfinance - DEBUG -    Entering _get_cookie_and_crumb()
+2024-08-15 23:47:40,614 - yfinance - DEBUG - cookie_mode = 'basic'
+2024-08-15 23:47:40,614 - yfinance - DEBUG -     Entering _get_cookie_and_crumb_basic()
+2024-08-15 23:47:40,614 - yfinance - DEBUG - reusing cookie
+2024-08-15 23:47:40,614 - yfinance - DEBUG - reusing crumb
+2024-08-15 23:47:40,614 - yfinance - DEBUG -     Exiting _get_cookie_and_crumb_basic()
+2024-08-15 23:47:40,614 - yfinance - DEBUG -    Exiting _get_cookie_and_crumb()
+2024-08-15 23:47:40,926 - urllib3.connectionpool - DEBUG - https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/AMZN?range=1d&interval=1d&crumb=5uc4RJ9pgkm HTTP/1.1" 200 1190
+2024-08-15 23:47:40,926 - yfinance - DEBUG - response code=200
+2024-08-15 23:47:40,926 - yfinance - DEBUG -   Exiting get()
+2024-08-15 23:47:40,926 - yfinance - DEBUG -  Exiting _fetch_ticker_tz()
+2024-08-15 23:47:40,926 - peewee - DEBUG - ('BEGIN', None)
+2024-08-15 23:47:40,941 - peewee - DEBUG - ('INSERT INTO "_kv" ("key", "value") VALUES (?, ?)', ['AMZN', 'America/New_York'])
+2024-08-15 23:47:40,945 - yfinance - DEBUG -  Entering history()
+2024-08-15 23:47:40,946 - yfinance - DEBUG - AMZN: Yahoo GET parameters: {'period1': '2023-08-16 00:00:00-04:00', 'period2': '2024-08-15 00:00:00-04:00', 'interval': '1d', 'includePrePost': False, 'events': 'div,splits,capitalGains'}
+2024-08-15 23:47:40,947 - yfinance - DEBUG -   Entering get()
+2024-08-15 23:47:40,947 - yfinance - DEBUG - url=https://query2.finance.yahoo.com/v8/finance/chart/AMZN
+2024-08-15 23:47:40,947 - yfinance - DEBUG - params=frozendict.frozendict({'period1': 1692158400, 'period2': 1723694400, 'interval': '1d', 'includePrePost': False, 'events': 'div,splits,capitalGains'})
+2024-08-15 23:47:40,948 - yfinance - DEBUG -    Entering _get_cookie_and_crumb()
+2024-08-15 23:47:40,948 - yfinance - DEBUG - cookie_mode = 'basic'
+2024-08-15 23:47:40,948 - yfinance - DEBUG -     Entering _get_cookie_and_crumb_basic()
+2024-08-15 23:47:40,948 - yfinance - DEBUG - reusing cookie
+2024-08-15 23:47:40,949 - yfinance - DEBUG - reusing crumb
+2024-08-15 23:47:40,949 - yfinance - DEBUG -     Exiting _get_cookie_and_crumb_basic()
+2024-08-15 23:47:40,949 - yfinance - DEBUG -    Exiting _get_cookie_and_crumb()
+2024-08-15 23:47:41,258 - urllib3.connectionpool - DEBUG - https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/AMZN?period1=1692158400&period2=1723694400&interval=1d&includePrePost=False&events=div%2Csplits%2CcapitalGains&crumb=5uc4RJ9pgkm HTTP/1.1" 200 None
+2024-08-15 23:47:41,258 - yfinance - DEBUG - response code=200
+2024-08-15 23:47:41,258 - yfinance - DEBUG -   Exiting get()
+2024-08-15 23:47:41,279 - yfinance - DEBUG - AMZN: yfinance received OHLC data: 2023-08-16 13:30:00 -> 2024-08-14 13:30:00
+2024-08-15 23:47:41,282 - yfinance - DEBUG - AMZN: OHLC after cleaning: 2023-08-16 09:30:00-04:00 -> 2024-08-14 09:30:00-04:00
+2024-08-15 23:47:41,286 - yfinance - DEBUG - AMZN: OHLC after combining events: 2023-08-16 00:00:00-04:00 -> 2024-08-14 00:00:00-04:00
+2024-08-15 23:47:41,290 - yfinance - DEBUG - AMZN: yfinance returning OHLC: 2023-08-16 00:00:00-04:00 -> 2024-08-14 00:00:00-04:00
+2024-08-15 23:47:41,291 - yfinance - DEBUG -  Exiting history()
+2024-08-15 23:47:41,291 - yfinance - DEBUG - Exiting history()
+2024-08-15 23:47:41,302 - root - DEBUG - The historic data total_historical_data ----------------->                                  Open        High         Low  ...  Dividends  Stock Splits  symbol
+Date                                                           ...                                 
+2023-08-16 00:00:00-04:00  137.190002  137.270004  135.009995  ...        0.0           0.0    AMZN
+2023-08-17 00:00:00-04:00  135.460007  136.089996  133.529999  ...        0.0           0.0    AMZN
+2023-08-18 00:00:00-04:00  131.619995  134.070007  131.149994  ...        0.0           0.0    AMZN
+2023-08-21 00:00:00-04:00  133.740005  135.190002  132.710007  ...        0.0           0.0    AMZN
+2023-08-22 00:00:00-04:00  135.080002  135.649994  133.729996  ...        0.0           0.0    AMZN
+...                               ...         ...         ...  ...        ...           ...     ...
+2024-08-08 00:00:00-04:00  165.169998  166.690002  162.550003  ...        0.0           0.0    AMZN
+2024-08-09 00:00:00-04:00  166.399994  168.550003  165.850006  ...        0.0           0.0    AMZN
+2024-08-12 00:00:00-04:00  168.139999  168.550003  166.110001  ...        0.0           0.0    AMZN
+2024-08-13 00:00:00-04:00  167.809998  171.039993  167.100006  ...        0.0           0.0    AMZN
+2024-08-14 00:00:00-04:00  172.110001  172.279999  168.860001  ...        0.0           0.0    AMZN
+
+[251 rows x 8 columns]
+2024-08-15 23:48:02,011 - yfinance - DEBUG - Entering history()
+2024-08-15 23:48:02,011 - peewee - DEBUG - ('SELECT "t1"."key", "t1"."value" FROM "_kv" AS "t1" WHERE ("t1"."key" = ?) LIMIT ? OFFSET ?', ['TSLA', 1, 0])
+2024-08-15 23:48:02,011 - yfinance - DEBUG -  Entering _fetch_ticker_tz()
+2024-08-15 23:48:02,011 - yfinance - DEBUG -   Entering get()
+2024-08-15 23:48:02,011 - yfinance - DEBUG - url=https://query2.finance.yahoo.com/v8/finance/chart/TSLA
+2024-08-15 23:48:02,011 - yfinance - DEBUG - params=frozendict.frozendict({'range': '1d', 'interval': '1d'})
+2024-08-15 23:48:02,011 - yfinance - DEBUG -    Entering _get_cookie_and_crumb()
+2024-08-15 23:48:02,011 - yfinance - DEBUG - cookie_mode = 'basic'
+2024-08-15 23:48:02,011 - yfinance - DEBUG -     Entering _get_cookie_and_crumb_basic()
+2024-08-15 23:48:02,011 - yfinance - DEBUG - reusing cookie
+2024-08-15 23:48:02,011 - yfinance - DEBUG - reusing crumb
+2024-08-15 23:48:02,011 - yfinance - DEBUG -     Exiting _get_cookie_and_crumb_basic()
+2024-08-15 23:48:02,011 - yfinance - DEBUG -    Exiting _get_cookie_and_crumb()
+2024-08-15 23:48:02,327 - urllib3.connectionpool - DEBUG - https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/TSLA?range=1d&interval=1d&crumb=5uc4RJ9pgkm HTTP/1.1" 200 1196
+2024-08-15 23:48:02,327 - yfinance - DEBUG - response code=200
+2024-08-15 23:48:02,341 - yfinance - DEBUG -   Exiting get()
+2024-08-15 23:48:02,341 - yfinance - DEBUG -  Exiting _fetch_ticker_tz()
+2024-08-15 23:48:02,341 - peewee - DEBUG - ('BEGIN', None)
+2024-08-15 23:48:02,341 - peewee - DEBUG - ('INSERT INTO "_kv" ("key", "value") VALUES (?, ?)', ['TSLA', 'America/New_York'])
+2024-08-15 23:48:02,343 - yfinance - DEBUG -  Entering history()
+2024-08-15 23:48:02,344 - yfinance - DEBUG - TSLA: Yahoo GET parameters: {'period1': '2023-08-16 00:00:00-04:00', 'period2': '2024-08-15 00:00:00-04:00', 'interval': '1d', 'includePrePost': False, 'events': 'div,splits,capitalGains'}
+2024-08-15 23:48:02,344 - yfinance - DEBUG -   Entering get()
+2024-08-15 23:48:02,344 - yfinance - DEBUG - url=https://query2.finance.yahoo.com/v8/finance/chart/TSLA
+2024-08-15 23:48:02,345 - yfinance - DEBUG - params=frozendict.frozendict({'period1': 1692158400, 'period2': 1723694400, 'interval': '1d', 'includePrePost': False, 'events': 'div,splits,capitalGains'})
+2024-08-15 23:48:02,345 - yfinance - DEBUG -    Entering _get_cookie_and_crumb()
+2024-08-15 23:48:02,345 - yfinance - DEBUG - cookie_mode = 'basic'
+2024-08-15 23:48:02,345 - yfinance - DEBUG -     Entering _get_cookie_and_crumb_basic()
+2024-08-15 23:48:02,345 - yfinance - DEBUG - reusing cookie
+2024-08-15 23:48:02,345 - yfinance - DEBUG - reusing crumb
+2024-08-15 23:48:02,345 - yfinance - DEBUG -     Exiting _get_cookie_and_crumb_basic()
+2024-08-15 23:48:02,346 - yfinance - DEBUG -    Exiting _get_cookie_and_crumb()
+2024-08-15 23:48:02,659 - urllib3.connectionpool - DEBUG - https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/TSLA?period1=1692158400&period2=1723694400&interval=1d&includePrePost=False&events=div%2Csplits%2CcapitalGains&crumb=5uc4RJ9pgkm HTTP/1.1" 200 None
+2024-08-15 23:48:02,659 - yfinance - DEBUG - response code=200
+2024-08-15 23:48:02,659 - yfinance - DEBUG -   Exiting get()
+2024-08-15 23:48:02,659 - yfinance - DEBUG - TSLA: yfinance received OHLC data: 2023-08-16 13:30:00 -> 2024-08-14 13:30:00
+2024-08-15 23:48:02,676 - yfinance - DEBUG - TSLA: OHLC after cleaning: 2023-08-16 09:30:00-04:00 -> 2024-08-14 09:30:00-04:00
+2024-08-15 23:48:02,679 - yfinance - DEBUG - TSLA: OHLC after combining events: 2023-08-16 00:00:00-04:00 -> 2024-08-14 00:00:00-04:00
+2024-08-15 23:48:02,683 - yfinance - DEBUG - TSLA: yfinance returning OHLC: 2023-08-16 00:00:00-04:00 -> 2024-08-14 00:00:00-04:00
+2024-08-15 23:48:02,684 - yfinance - DEBUG -  Exiting history()
+2024-08-15 23:48:02,684 - yfinance - DEBUG - Exiting history()
+2024-08-15 23:48:02,694 - root - DEBUG - The historic data total_historical_data ----------------->                                  Open        High         Low  ...  Dividends  Stock Splits  symbol
+Date                                                           ...                                 
+2023-08-16 00:00:00-04:00  228.020004  233.970001  225.380005  ...        0.0           0.0    TSLA
+2023-08-17 00:00:00-04:00  226.059998  226.740005  218.830002  ...        0.0           0.0    TSLA
+2023-08-18 00:00:00-04:00  214.119995  217.580002  212.360001  ...        0.0           0.0    TSLA
+2023-08-21 00:00:00-04:00  221.550003  232.130005  220.580002  ...        0.0           0.0    TSLA
+2023-08-22 00:00:00-04:00  240.250000  240.820007  229.550003  ...        0.0           0.0    TSLA
+...                               ...         ...         ...  ...        ...           ...     ...
+2024-08-08 00:00:00-04:00  195.699997  200.699997  192.039993  ...        0.0           0.0    TSLA
+2024-08-09 00:00:00-04:00  197.050003  200.880005  195.110001  ...        0.0           0.0    TSLA
+2024-08-12 00:00:00-04:00  199.020004  199.259995  194.669998  ...        0.0           0.0    TSLA
+2024-08-13 00:00:00-04:00  198.470001  208.490005  197.059998  ...        0.0           0.0    TSLA
+2024-08-14 00:00:00-04:00  207.389999  208.440002  198.750000  ...        0.0           0.0    TSLA
+
+[251 rows x 8 columns]
+2024-08-15 23:48:23,506 - yfinance - DEBUG - Entering history()
+2024-08-15 23:48:23,523 - peewee - DEBUG - ('SELECT "t1"."key", "t1"."value" FROM "_kv" AS "t1" WHERE ("t1"."key" = ?) LIMIT ? OFFSET ?', ['HSBA.L', 1, 0])
+2024-08-15 23:48:23,523 - yfinance - DEBUG -  Entering _fetch_ticker_tz()
+2024-08-15 23:48:23,523 - yfinance - DEBUG -   Entering get()
+2024-08-15 23:48:23,523 - yfinance - DEBUG - url=https://query2.finance.yahoo.com/v8/finance/chart/HSBA.L
+2024-08-15 23:48:23,523 - yfinance - DEBUG - params=frozendict.frozendict({'range': '1d', 'interval': '1d'})
+2024-08-15 23:48:23,523 - yfinance - DEBUG -    Entering _get_cookie_and_crumb()
+2024-08-15 23:48:23,523 - yfinance - DEBUG - cookie_mode = 'basic'
+2024-08-15 23:48:23,523 - yfinance - DEBUG -     Entering _get_cookie_and_crumb_basic()
+2024-08-15 23:48:23,523 - yfinance - DEBUG - reusing cookie
+2024-08-15 23:48:23,527 - yfinance - DEBUG - reusing crumb
+2024-08-15 23:48:23,527 - yfinance - DEBUG -     Exiting _get_cookie_and_crumb_basic()
+2024-08-15 23:48:23,527 - yfinance - DEBUG -    Exiting _get_cookie_and_crumb()
+2024-08-15 23:48:23,893 - urllib3.connectionpool - DEBUG - https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/HSBA.L?range=1d&interval=1d&crumb=5uc4RJ9pgkm HTTP/1.1" 200 1188
+2024-08-15 23:48:23,893 - yfinance - DEBUG - response code=200
+2024-08-15 23:48:23,893 - yfinance - DEBUG -   Exiting get()
+2024-08-15 23:48:23,893 - yfinance - DEBUG -  Exiting _fetch_ticker_tz()
+2024-08-15 23:48:23,893 - peewee - DEBUG - ('BEGIN', None)
+2024-08-15 23:48:23,893 - peewee - DEBUG - ('INSERT INTO "_kv" ("key", "value") VALUES (?, ?)', ['HSBA.L', 'Europe/London'])
+2024-08-15 23:48:23,893 - yfinance - DEBUG -  Entering history()
+2024-08-15 23:48:23,893 - yfinance - DEBUG - HSBA.L: Yahoo GET parameters: {'period1': '2023-08-16 00:00:00+01:00', 'period2': '2024-08-15 00:00:00+01:00', 'interval': '1d', 'includePrePost': False, 'events': 'div,splits,capitalGains'}
+2024-08-15 23:48:23,893 - yfinance - DEBUG -   Entering get()
+2024-08-15 23:48:23,893 - yfinance - DEBUG - url=https://query2.finance.yahoo.com/v8/finance/chart/HSBA.L
+2024-08-15 23:48:23,908 - yfinance - DEBUG - params=frozendict.frozendict({'period1': 1692140400, 'period2': 1723676400, 'interval': '1d', 'includePrePost': False, 'events': 'div,splits,capitalGains'})
+2024-08-15 23:48:23,908 - yfinance - DEBUG -    Entering _get_cookie_and_crumb()
+2024-08-15 23:48:23,908 - yfinance - DEBUG - cookie_mode = 'basic'
+2024-08-15 23:48:23,908 - yfinance - DEBUG -     Entering _get_cookie_and_crumb_basic()
+2024-08-15 23:48:23,908 - yfinance - DEBUG - reusing cookie
+2024-08-15 23:48:23,911 - yfinance - DEBUG - reusing crumb
+2024-08-15 23:48:23,911 - yfinance - DEBUG -     Exiting _get_cookie_and_crumb_basic()
+2024-08-15 23:48:23,911 - yfinance - DEBUG -    Exiting _get_cookie_and_crumb()
+2024-08-15 23:48:24,674 - urllib3.connectionpool - DEBUG - https://query2.finance.yahoo.com:443 "GET /v8/finance/chart/HSBA.L?period1=1692140400&period2=1723676400&interval=1d&includePrePost=False&events=div%2Csplits%2CcapitalGains&crumb=5uc4RJ9pgkm HTTP/1.1" 200 None
+2024-08-15 23:48:24,677 - yfinance - DEBUG - response code=200
+2024-08-15 23:48:24,677 - yfinance - DEBUG -   Exiting get()
+2024-08-15 23:48:24,681 - yfinance - DEBUG - HSBA.L: yfinance received OHLC data: 2023-08-16 07:00:00 -> 2024-08-14 07:00:00
+2024-08-15 23:48:24,683 - yfinance - DEBUG - HSBA.L: OHLC after cleaning: 2023-08-16 08:00:00+01:00 -> 2024-08-14 08:00:00+01:00
+2024-08-15 23:48:24,689 - yfinance - DEBUG - HSBA.L: OHLC after combining events: 2023-08-16 00:00:00+01:00 -> 2024-08-14 00:00:00+01:00
+2024-08-15 23:48:24,694 - yfinance - DEBUG - HSBA.L: yfinance returning OHLC: 2023-08-16 00:00:00+01:00 -> 2024-08-14 00:00:00+01:00
+2024-08-15 23:48:24,695 - yfinance - DEBUG -  Exiting history()
+2024-08-15 23:48:24,695 - yfinance - DEBUG - Exiting history()
+2024-08-15 23:48:24,706 - root - DEBUG - The historic data total_historical_data ----------------->                                  Open        High         Low  ...  Dividends  Stock Splits  symbol
+Date                                                           ...                                 
+2023-08-16 00:00:00+01:00  536.655173  538.804626  526.982494  ...        0.0           0.0  HSBA.L
+2023-08-17 00:00:00+01:00  530.923279  534.505757  528.236420  ...        0.0           0.0  HSBA.L
+2023-08-18 00:00:00+01:00  525.907865  527.609510  518.922043  ...        0.0           0.0  HSBA.L
+2023-08-21 00:00:00+01:00  522.683531  527.251223  520.981887  ...        0.0           0.0  HSBA.L
+2023-08-22 00:00:00+01:00  524.474802  525.370422  519.996704  ...        0.0           0.0  HSBA.L
+...                               ...         ...         ...  ...        ...           ...     ...
+2024-08-08 00:00:00+01:00  623.356989  631.255569  620.304720  ...        0.0           0.0  HSBA.L
+2024-08-09 00:00:00+01:00  633.498539  634.483150  628.969294  ...        0.0           0.0  HSBA.L
+2024-08-12 00:00:00+01:00  635.073892  638.520030  633.596976  ...        0.0           0.0  HSBA.L
+2024-08-13 00:00:00+01:00  637.830755  638.716928  634.286180  ...        0.0           0.0  HSBA.L
+2024-08-14 00:00:00+01:00  640.292293  641.670772  638.126138  ...        0.0           0.0  HSBA.L
+
+[253 rows x 8 columns]

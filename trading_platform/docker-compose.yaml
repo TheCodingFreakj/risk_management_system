@@ -1,0 +1,10 @@
+version: '3.7'
+
+services:
+  lean-engine:
+    image: quantconnect/lean:latest
+    volumes:
+      - ./Lean/Algorithm.Python:/Lean/Data/algorithm
+      - ./Lean:/Lean/Launcher
+    command: >
+      --config /Lean/Launcher/config.json

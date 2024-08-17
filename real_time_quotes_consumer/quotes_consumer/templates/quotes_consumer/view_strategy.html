@@ -23,47 +23,42 @@
     </ul>
 
     <!-- Form to trigger a backtest -->
-    <form id="backtestForm" action="{% url 'run_backtest' strategy.id %}" method="post">
+    <form id="backtestForm" action="{% url 'run_backtest' %}" method="post">
         {% csrf_token %}
+        <!-- Hidden input to send the strategy_id -->
+        <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
         <button type="submit">Run Backtest</button>
     </form>
 
     <script>
         document.getElementById('backtestForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent the default form submission
-    
-            // Create a FormData object from the form
-            var formData = new FormData(this);
-    
-            // Send a POST request to the backend using Fetch API
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest' // Indicate that this is an AJAX request
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    return response.text().then(text => { throw new Error(text); });
-                }
-            })
-            .then(data => {
-                // Handle successful response
-                if (data.success) {
-                    alert('Backtest completed successfully! Redirecting...');
-                    window.location.href = '/results/' + data.result_id; // Redirect to results page
-                } else {
-                    alert('Error running backtest: ' + data.error);
-                }
-            })
-            .catch(error => {
-                // Handle errors
-                alert('An error occurred: ' + error);
-            });
-        });
+    event.preventDefault(); // Prevent the default form submission
+
+    const strategyId = document.querySelector('input[name="strategy_id"]').value;
+
+    // Prepare the data to be sent as JSON
+    const data = {
+        strategy_id: strategyId
+    };
+
+    // Send the data using AJAX
+    fetch("{% url 'run_backtest' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}', // Include CSRF token in the headers
+        },
+        body: JSON.stringify(data) // Convert the data to JSON
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Backtest initiated:', data);
+        // Handle the response here
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+});
     </script>
     
 </body>

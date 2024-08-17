@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'strategy'
+    'strategy',
+    'channels'
 ]
 
 # Define the path to store uploaded files

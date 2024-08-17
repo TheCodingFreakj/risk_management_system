@@ -1,48 +1,40 @@
-# Stage 1: Build .NET environment
-FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS dotnet_base
-WORKDIR /app
+# Start with an official Python image
+FROM python:3.9-slim
 
-# Copy the Lean application into the .NET container
-COPY Lean/ /app/Lean/
+# # Install dependencies needed for Docker
+# RUN apt-get update && \
+#     apt-get install -y \
+#     curl \
+#     lsb-release \
+#     gnupg \
+#     software-properties-common \
+#     apt-transport-https \
+#     ca-certificates && \
+#     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+#     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+#     apt-get update && \
+#     apt-get install -y docker-ce docker-ce-cli containerd.io
 
-# Stage 2: Build Python environment
-FROM python:3.9-slim AS python_base
-
-# Install Python dependencies
-WORKDIR /app
-COPY requirements.txt /app/
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
-
-# Stage 3: Build final image with both .NET SDK and Python
-FROM python:3.9-slim AS final
-
-# Install necessary packages for .NET SDK installation
-RUN apt-get update && \
-    apt-get install -y wget apt-transport-https gnupg && \
-    wget https://packages.microsoft.com/keys/microsoft.asc && \
-    apt-key add microsoft.asc && \
-    wget https://packages.microsoft.com/config/debian/10/prod.list && \
-    mv prod.list /etc/apt/sources.list.d/dotnet.list && \
-    apt-get update && \
-    apt-get install -y dotnet-sdk-6.0 && \
-    rm -rf /var/lib/apt/lists/*
+# # Install Docker Compose
+# RUN curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
+#     chmod +x /usr/local/bin/docker-compose
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the Lean application from the .NET base stage
-COPY --from=dotnet_base /app/Lean /app/Lean
+# Copy the current directory contents into the container at /app
+COPY . /app/
 
-# Copy Python application code and dependencies from the Python base stage
-COPY --from=python_base /app /app
+# Install Python dependencies
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && pip install -r /app/requirements.txt
 
-# Set environment variables for Django
-ENV DJANGO_SETTINGS_MODULE=trading_platform.settings
-ENV PYTHONUNBUFFERED=1
+# Set permissions on the docker-compose.yaml and entrypoint.sh
+# RUN chmod +x /app/docker-compose.yaml
+RUN chmod +x /app/entrypoint.sh
 
 # Expose port 8010 for the Django application
 EXPOSE 8010
 
-# Run the Django development server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8010"]
+# Set the entry point to the script
+CMD ["/app/entrypoint.sh"]

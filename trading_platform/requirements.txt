@@ -4,5 +4,9 @@ psycopg2-binary
 kafka-python
 python-dotenv
 requests
-pandas
-
+# numpy
+# pandas
+# scipy
+quantconnect-lean
+channels
+daphne

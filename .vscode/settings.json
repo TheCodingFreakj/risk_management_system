@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./trading_platform/Lean/Common"
+    ]
+}

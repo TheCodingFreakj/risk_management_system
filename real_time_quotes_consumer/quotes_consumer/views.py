@@ -117,81 +117,176 @@ async def compute_final_context(symbols, scenarios):
     }
 
 
+from django.http import JsonResponse
+import asyncio
+import websockets
+import json
 
+def run_backtest(request):
+    try:
+        # Parse the incoming request to get the strategy_id
+        data = json.loads(request.body)
+        print(f"daata----------------------->{data}")
+        strategy_id = data.get('strategy_id')
 
-def run_backtest(request, strategy_id):
-    if request.method == 'POST':
+        if not strategy_id:
+            return JsonResponse({'success': False, 'error': 'strategy_id is required'}, status=400)
+
+        # Get or create an event loop
         try:
-            # External service URL to get strategy configuration
-            strategy_url = f"http://tradingplatform:8010/api/strategy/{strategy_id}/"
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            # No current event loop in this thread, so we create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
-            # Fetch the strategy configuration from the external service
-            strategy_response = requests.get(strategy_url)
-            if strategy_response.status_code == 200:
-                strategy_data = strategy_response.json()
-            else:
-                return JsonResponse({'success': False, 'error': 'Strategy not found'}, status=404)
+        # Trigger the WebSocket communication to Service B
+        loop.run_until_complete(run_backtest_ws(strategy_id))
 
-            # Extract strategy details
-            algorithm_name = strategy_data.get('name', 'SimpleMovingAverage')
-            start_date = strategy_data.get('start_date', '2024-01-01')
-            end_date = strategy_data.get('end_date', '2024-06-01')
+        return JsonResponse({'success': True, 'message': 'Backtest initiated'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-            # Generate a unique identifier for the backtest
-            backtest_id = str(uuid.uuid4())
+async def run_backtest_ws(strategy_id):
+    uri = "ws://tradingplatform:8010/ws/backtest/"
+    try:
+        async with websockets.connect(uri) as websocket:
+            # Send the strategy ID to Service B
+            await websocket.send(json.dumps({'strategy_id': strategy_id}))
 
-            # Prepare the configuration file dynamically
-            config_data = {
-                "algorithm-type-name": algorithm_name,
-                "algorithm-language": "Python",
-                "data-folder": "./Data",
-                "results-folder": f"./Results/{backtest_id}",
-                "log-folder": "./Logs",
-                "live-mode": False,
-                "backtest-start-date": start_date,
-                "backtest-end-date": end_date
-            }
-            # Save the configuration file locally
-            local_config_file_path = '/tmp/lean_config.json'
-            with open(local_config_file_path, 'w') as f:
-                json.dump(config_data, f, indent=4)
+            # Listen for messages from Service B
+            while True:
+                response = await websocket.recv()
+                data = json.loads(response)
 
-            # Trigger the Lean Engine backtest via HTTP request
-            lean_service_url = "http://tradingplatform:8010/run_backtest/"
-            files = {'config_file': open(local_config_file_path, 'rb')}
-            response = requests.post(lean_service_url, files=files)
+                if data.get('success'):
+                    print("Backtest successful:", data.get('data'))
 
-            if response.status_code == 200:
-                backtest_results = response.json()
-            else:
-                return JsonResponse({'success': False, 'error': f"Failed to trigger backtest: {response.text.strip()}"}, status=500)
+                    # Prepare the data to be sent to the external service for saving the backtest
+                    backtest_data = {
+                        "strategy_id": strategy_id,
+                        "equity_curve": data.get("data", {}).get("equity_curve", []),
+                        "sharpe_ratio": data.get("data", {}).get("sharpe_ratio", 0.0),
+                        "max_drawdown": data.get("data", {}).get("max_drawdown", 0.0),
+                        "total_return": data.get("data", {}).get("total_return", 0.0),
+                        "start_date": data.get("data", {}).get("start_date", ""),
+                        "end_date": data.get("data", {}).get("end_date", ""),
+                    }
 
-            # Prepare the data to be sent to the external service for saving the backtest
-            backtest_data = {
-                "strategy_id": strategy_id,
-                "equity_curve": backtest_results.get("equity_curve", []),
-                "sharpe_ratio": backtest_results.get("sharpe_ratio", 0.0),
-                "max_drawdown": backtest_results.get("max_drawdown", 0.0),
-                "total_return": backtest_results.get("total_return", 0.0),
-                "start_date": backtest_results.get("start_date", ""),
-                "end_date": backtest_results.get("end_date", ""),
-            }
+                    # Send the data to the external service using a separate thread
+                    await asyncio.get_event_loop().run_in_executor(
+                        None, save_backtest_results, backtest_data
+                    )
+                    break
+                else:
+                    print("Update or error:", data.get('error'))
+    except Exception as e:
+        print(f"WebSocket communication failed: {str(e)}")
 
-            # Send the data to the external service
-            external_service_url = "http://tradingplatform:8010/api/save_backtest/"
-            response = requests.post(external_service_url, json=backtest_data)
+def save_backtest_results(backtest_data):
+    try:
+        external_service_url = "http://tradingplatform:8010/api/save_backtest/"
+        response = requests.post(external_service_url, json=backtest_data)
+        if response.status_code == 200:
+            result_id = response.json().get("result_id")
+            print(f"Backtest results saved successfully. Result ID: {result_id}")
+        else:
+            print(f"Failed to save backtest results: {response.text.strip()}")
+    except Exception as e:
+        print(f"Failed to save backtest results: {str(e)}")
+# @csrf_exempt
+# def run_backtest(request, strategy_id):
+#     print(f"strategy_id---------------->{strategy_id}")
+    
+#     try:
+#             # External service URL to get strategy configuration
+#             strategy_url = f"http://tradingplatform:8010/api/strategy/{strategy_id}/"
 
-            # Check the response from the external service
-            if response.status_code == 200:
-                result_id = response.json().get("result_id")
-                return JsonResponse({'success': True, 'result_id': result_id})
-            else:
-                return JsonResponse({'success': False, 'error': f"Failed to save backtest results: {response.text.strip()}"}, status=500)
+#             # Fetch the strategy configuration from the external service
+#             strategy_response = requests.get(strategy_url)
+#             if strategy_response.status_code == 200:
+#                 strategy_data = strategy_response.json()
+#             else:
+#                 return JsonResponse({'success': False, 'error': 'Strategy not found'}, status=404)
+#             print(f"strategy_data-------------------->{strategy_data}")
+#             # Extract strategy details
+#             algorithm_name = strategy_data.get('name', 'MovingAverageCrossAlgorithm')
+#             start_date = strategy_data.get('start_date', '2024-01-01')
+#             end_date = strategy_data.get('end_date', '2024-06-01')
+#             short_ma_period = strategy_data.get('short_ma_period')
+#             long_ma_period = strategy_data.get('long_ma_period')
+#             max_drawdown = strategy_data.get('max_drawdown')
+#             print(f"strategy_data-------------------->{algorithm_name}")
+#             # Generate a unique identifier for the backtest
+#             backtest_id = str(uuid.uuid4())
+#             config_data =   {
+#     "algorithm-type-name": algorithm_name,
+#     "algorithm-language": "Python",
+#     "data-folder": "/app/Lean/Data",
+#     "results-folder": f"/app/Lean/Results/{backtest_id}",
+#     "log-folder": "/app/Lean/Logs",
+#     "parameters": {
+#         "ShortMAPeriod": short_ma_period,
+#         "LongMAPeriod": long_ma_period,
+#         "StartDate": start_date,
+#         "EndDate": end_date,
+#         "InitialCash": max_drawdown
+#     }
+#             }
+#             # curl -X POST http://tradingplatform:8010/run_backtest_backend/ -H "Content-Type: application/json" -d '{"key":"value"}'
 
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': f"An error occurred: {str(e)}"}, status=500)
+          
+#             print(f"It is reaching here--------------------------->")
+#             # Trigger the Lean Engine backtest via HTTP request
+#             lean_service_url = "http://tradingplatform:8010/run_backtest_backend/"
+           
+#             print(f"It is reaching here------------------->")
+#             response = None
+#             try:
+#                 # Headers you want to include in the request
+#                 headers = {
+#                     "Content-Type": "application/json",  # Specify the content type
+#                 }
+#                 print(f"It is reaching here------------------->{lean_service_url}")
+#                 response = requests.post(lean_service_url, json=config_data,headers=headers, timeout=100)  # 10-second timeout
+#                 print(f"It is reaching here------------------->{response.raise_for_status()}")
+#                 response.raise_for_status()  # Raises HTTPError if the status is 4xx, 5xx
+                
+#                 print("Request successful:", response.json())
+#             except requests.exceptions.RequestException as e:
+#                 print("Request failed:", e)
+#             print(f"response--------------------------->{response}")
+#             if response.status_code == 200:
+#                 backtest_results = response.json()
+#             else:
+#                 return JsonResponse({'success': False, 'error': f"Failed to trigger backtest: {response.text.strip()}"}, status=500)
 
-    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+#             # Prepare the data to be sent to the external service for saving the backtest
+#             backtest_data = {
+#                 "strategy_id": strategy_id,
+#                 "equity_curve": backtest_results.get("equity_curve", []),
+#                 "sharpe_ratio": backtest_results.get("sharpe_ratio", 0.0),
+#                 "max_drawdown": backtest_results.get("max_drawdown", 0.0),
+#                 "total_return": backtest_results.get("total_return", 0.0),
+#                 "start_date": backtest_results.get("start_date", ""),
+#                 "end_date": backtest_results.get("end_date", ""),
+#             }
+
+#             # Send the data to the external service
+#             external_service_url = "http://tradingplatform:8010/api/save_backtest/"
+#             response = requests.post(external_service_url, json=backtest_data)
+
+#             # Check the response from the external service
+#             if response.status_code == 200:
+#                 result_id = response.json().get("result_id")
+#                 return JsonResponse({'success': True, 'result_id': result_id})
+#             else:
+#                 return JsonResponse({'success': False, 'error': f"Failed to save backtest results: {response.text.strip()}"}, status=500)
+
+#     except Exception as e:
+#             return JsonResponse({'success': False, 'error': f"An error occurred for run_backtest: {str(e)}"}, status=500)
+
+    
 
 
 @csrf_exempt

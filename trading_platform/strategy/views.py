@@ -5,9 +5,13 @@ from rest_framework import status
 from .models import StrategyConfig, BacktestResult
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from .models import StrategyConfig
-
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+import subprocess
+import os
 class StrategyConfigDetail(APIView):
     def get(self, request, strategy_id):
         try:
@@ -41,56 +45,65 @@ class BacktestResultDetail(APIView):
             return Response(data, status=status.HTTP_200_OK)
         except BacktestResult.DoesNotExist:
             return Response({'error': 'Backtest result not found'}, status=status.HTTP_404_NOT_FOUND)
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
-import subprocess
-import json
-import os
 
-@csrf_exempt
-def run_backtest(request):
-    if request.method == 'POST':
-        try:
-            # Save the configuration file
-            if 'config_file' not in request.FILES:
-                return JsonResponse({'success': False, 'error': 'No configuration file provided'}, status=400)
 
-            config_file = request.FILES['config_file']
-            # Compute the path two directories up
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            config_file_path = os.path.join(base_dir,  'Lean', 'Algorithm.Python', 'config.json')
+def home(request):
+    return HttpResponse("Welcome to the Trading Platform API")
 
-            # Print the path to verify
-            print(f"Config file path: {config_file_path}")
-            # with open(config_file_path, 'wb') as f:
-            #     for chunk in config_file.chunks():
-            #         f.write(chunk)
-            
-           # Define the path to the Lean Engine executable and the configuration file
-            lean_executable_path = '/app/Lean/Launcher/bin/Debug/QuantConnect.Lean.Launcher.dll'
-            
-            # Run the Lean Engine backtest
-            command = ['dotnet', lean_executable_path, '--config', config_file_path]
-            result = subprocess.run(command, capture_output=True, text=True)
 
-            # Check for errors in running the backtest
-            if result.returncode != 0:
-                return JsonResponse({'success': False, 'error': result.stderr.strip()}, status=500)
 
-            # Process the result, assuming output is in JSON format
-            output = result.stdout
-            try:
-                backtest_results = json.loads(output)
-            except json.JSONDecodeError:
-                return JsonResponse({'success': False, 'error': 'Failed to parse backtest results.'}, status=500)
 
-            return JsonResponse(backtest_results)
+
+# @csrf_exempt  # Disable CSRF protection for this view if needed
+# @require_POST  # Ensure that this view only handles POST requests
+# def run_backtest_backend(request):
+#     print(f"It is reaching here--------------------------->{json.loads(request.body)}")
+   
+#     try:
+#             print(f"Received request data: {json.loads(request.body)}")
+#             config_data = json.loads(request.body)
+#             # # Save the configuration file
+#             # if 'config_file' not in request.FILES:
+#             #     return JsonResponse({'success': False, 'error': 'No configuration file provided'}, status=400)
         
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': f'An error occurred: {str(e)}'}, status=500)
+#             # config_file = request.FILES['config_file']
+#             # # Compute the path two directories up
+#             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+#             config_file_path = os.path.join(base_dir, 'Lean', 'config.json')
+#             print(config_file_path)
+#             with open(config_file_path, 'w') as f:
+#                 json.dump(config_data, f, indent=4)
+#             # # Print the path to verify
+#             # print(f"Config file path: {config_file_path}")
+#             # print(f"config_file path: {config_file}")
+#             # with open(config_file_path, 'wb') as f:
+#             #     for chunk in config_file.chunks():
+#             #         f.write(chunk)
+            
+
+#             command = ['dotnet', 'run','--project', "/app/Lean/Launcher/QuantConnect.Lean.Launcher.csproj", "--config", config_file_path]
+#             # Run the Lean Engine backtest
+#             # command = ['dotnet', 'run', '--project', '/app/Lean/Launcher/QuantConnect.Lean.Launcher.csproj', '--', '--config', config_file_path]
+
+#             result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+#             # Check for errors in running the backtest
+#             if result.returncode != 0:
+#                 return JsonResponse({'success': False, 'error': result.stderr.strip()}, status=500)
+
+#             # Process the result, assuming output is in JSON format
+#             output = result.stdout
+#             try:
+#                 backtest_results = json.loads(output)
+#             except json.JSONDecodeError:
+#                 return JsonResponse({'success': False, 'error': 'Failed to parse backtest results.'}, status=500)
+
+#             return JsonResponse(backtest_results)
+        
+#     except Exception as e:
+#             return JsonResponse({'success': False, 'error': f'An error occurred from run_backtest_backend: {str(e)}'}, status=500)
     
-    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+   
 
 def api_strategy_detail(request, strategy_id):
     strategy = get_object_or_404(StrategyConfig, id=strategy_id)

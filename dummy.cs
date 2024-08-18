@@ -104,6 +104,8 @@ RUN echo "Checking contents of /Lean directory:" && ls -l /Lean
 # Define the entry point for the Docker container
 CMD ["dotnet", "/Lean/QuantConnect.Lean.Launcher.dll"]
 
+docker run -it <your-docker-image-name> /bin/bash
+
 
 
 

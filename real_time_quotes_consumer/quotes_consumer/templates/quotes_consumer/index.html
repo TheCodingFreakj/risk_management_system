@@ -333,6 +333,9 @@
 
 
         <form id="strategy-form" onsubmit="validateAndSubmitForm(event)">
+            <label for="stock">Stock Name:</label><br>
+            <input type="text" id="stock" name="stock" required><br><br>
+
             <label for="name">Strategy Name:</label><br>
             <input type="text" id="name" name="name" required><br><br>
 
@@ -359,6 +362,7 @@ function validateAndSubmitForm(event) {
 
     // Validate the form fields
     const name = document.getElementById('name').value.trim();
+    const stock = document.getElementById('stock').value.trim();
     const shortMaPeriod = document.getElementById('short_ma_period').value;
     const longMaPeriod = document.getElementById('long_ma_period').value;
     const stopLoss = document.getElementById('stop_loss').value;

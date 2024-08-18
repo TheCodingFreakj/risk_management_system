@@ -1,6 +1,6 @@
 {
     "environment": "backtesting",
-    "algorithm-type-name": "MovingAverageCrossAlgorithm",
+    "algorithm-type-name": "DynamicMovingAverageAlgorithm",
     "algorithm-language": "Python",
     "data-folder": "/Lean/Data",
     "result-handler": "QuantConnect.Lean.Engine.Results.BacktestingResultHandler",
@@ -13,7 +13,7 @@
     "composer-dll-directory": "/Lean",
     "log-handler": "ConsoleLogHandler",
     "job-queue-handler": "QuantConnect.Queues.JobQueue",
-    "algorithm-location": "/Lean/Algorithm.Python/MovingAverageCrossAlgorithm.py",
+    "algorithm-location": "/Lean/Algorithm.Python/DynamicMovingAverageAlgorithm.py",
     "api-handler": "QuantConnect.Api.Api",
     "api-access-token": "",
     "job-organization-id": "",
@@ -27,6 +27,7 @@
         "LongMAPeriod": "200",
         "StartDate": "2023-01-01",
         "EndDate": "2023-12-31",
-        "InitialCash": "100000"
+        "InitialCash": "100000",
+        "Stock":"AAPL"
     }
 }

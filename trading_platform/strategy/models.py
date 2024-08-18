@@ -2,6 +2,7 @@ from django.db import models
 
 class StrategyConfig(models.Model):
     name = models.CharField(max_length=100)
+    stock = models.CharField(max_length=100)
     short_ma_period = models.IntegerField(default=50)
     long_ma_period = models.IntegerField(default=200)
     stop_loss = models.FloatField(default=0.05, help_text="Stop-loss percentage")

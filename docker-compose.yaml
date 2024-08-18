@@ -31,7 +31,9 @@ services:
     ports:
       - "8002:8002"
     networks:
-      - backend  
+      - backend 
+    privileged: true 
+    user: root  
     environment:
       DJANGO_SECRET_KEY: "django-insecure-wsai*7b(o72o(=&0l9&skxdyxns7(3)c!exhozga^j-krh0u2u"
       DJANGO_DEBUG: "True"
@@ -42,11 +44,15 @@ services:
       DB_PORT: "22585"
       DB_SCHEMA: "stocks_schema"  
       REDIS_HOST: "redis"
+      PYTHONUNBUFFERED: 1
       ALLOWED_HOSTS: "localhost,charts,realtimequotesproducer,riskservices,tradingplatform"
       KAFKA_BOOTSTRAP_SERVERS: "kafka-22753f33-priyaarshinipallavi-3893.g.aivencloud.com:22587" 
     depends_on:
       - redis
       # - charts
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock 
+      - /usr/bin/docker:/usr/bin/docker:ro  
 
   # charts:
   #   build:
@@ -91,21 +97,13 @@ services:
   #     - CELERY_BROKER_URL=redis://redis:6379/0
   #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
   #   command: celery -A risk_service worker --loglevel=info  
-  leanengine:
-    build:
-      image: leanimg19:latest
-    container_name: lean-engine  
-    environment:
-      - DOTNET_CLI_TELEMETRY_OPTOUT=1
-      - LC_ALL=C.UTF-8
-      - PATH=/usr/share/dotnet:$PATH  # Make sure the path to dotnet is first 
-    # volumes:
-    #   - ./data:/Lean/Data        # Mount your data directory
-    #   - ./config.json:/Lean/Launcher/config.json  # Mount your config.json file
-    #   - ./logs:/Lean/Logs        # Mount logs directory to persist logs
-    #         # Expose port if you need to access the Web API or any other service
-    # # command: ["dotnet", "/Lean/build/QuantConnect.Lean.Launcher.dll"]
-    network_mode: "host"
+  # leanengine:
+  #   image: leanimg20:latest  # Use the pre-built Docker image
+  #   container_name: lean-engine
+  #   environment:
+  #     - PYTHONUNBUFFERED=1  # Optional: ensures Python output is not buffered
+  #   tty: true  # Keeps the container running for further commands
+  #   network_mode: "host"
   
   tradingplatform:
     build:
@@ -114,6 +112,8 @@ services:
       - "8010:8010"
     networks:
       - backend
+    privileged: true  
+    user: root
     depends_on:
       - redis 
       - leanengine
@@ -129,7 +129,12 @@ services:
       ALLOWED_HOSTS: "127.0.0.1,localhost,charts,realtimequotesproducer,riskservices,tradingplatform"
       DB_SCHEMA: "stocks_schema"  
       CELERY_BROKER_URL: "redis://redis:6379/0"
-      CELERY_RESULT_BACKEND: "redis://redis:6379/0"  
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0" 
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  
+      - /usr/bin/docker:/usr/bin/docker:ro
+
    
 volumes:
   postgres_data:

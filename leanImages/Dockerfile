@@ -122,6 +122,11 @@ COPY --from=python-dotnet-env /usr/local /usr/local
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/Lean/Algorithm.Python  
 
+RUN rm -f /Lean/Algorithm.Python/MovingAverageAlgorithm.py
+# Ensure the old files are removed
+RUN rm -rf /Lean/Algorithm.Python/DynamicMovingAverageAlgorithm.py
+
+
 # Copy the Lean directory from the local machine to the Docker container
 COPY ./Lean /Lean
 
@@ -130,7 +135,7 @@ RUN echo "import sys; print(sys.path)" > /Lean/Algorithm.Python/test_env.py
 RUN python3.8 /Lean/Algorithm.Python/test_env.py
 
 # Verify that the algorithm file exists
-RUN ls -l /Lean/Algorithm.Python/MovingAverageCrossAlgorithm.py
+RUN ls -l /Lean/Algorithm.Python/DynamicMovingAverageAlgorithm.py
 
 # Verify that the project files are in the correct location
 RUN ls -l /Lean || true
@@ -187,11 +192,11 @@ COPY --from=build-env /Lean/build /Lean/
 COPY --from=build-env /Lean/Algorithm.Python /Lean/Algorithm.Python
 
 # Set permissions for the MovingAverageCrossAlgorithm.py file
-RUN chmod 644 /Lean/Algorithm.Python/MovingAverageCrossAlgorithm.py
+RUN chmod 644 /Lean/Algorithm.Python/DynamicMovingAverageAlgorithm.py
 
 # Verify the config.json file is in the final build directory
 RUN echo "Checking if config.json is in the final /Lean/build directory:" && ls -l /Lean/build/config.json
-RUN echo "Checking if MovingAverageCrossAlgorithm.py is in the final /Lean/Algorithm.Python directory:" && ls -l /Lean/Algorithm.Python
+RUN echo "Checking if DynamicMovingAverageAlgorithm.py is in the final /Lean/Algorithm.Python directory:" && ls -l /Lean/Algorithm.Python
 
 # Verify the contents of the root directory
 RUN echo "Checking contents of /Lean directory:" && ls -l /Lean

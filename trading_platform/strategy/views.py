@@ -24,6 +24,7 @@ class StrategyConfigDetail(APIView):
                 'stop_loss': strategy.stop_loss,
                 'take_profit': strategy.take_profit,
                 'max_drawdown': strategy.max_drawdown,
+                'stock':strategy.stock
             }
             return Response(data, status=status.HTTP_200_OK)
         except StrategyConfig.DoesNotExist:

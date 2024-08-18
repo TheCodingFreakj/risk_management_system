@@ -3,6 +3,7 @@
     "algorithm-type-name": "DynamicMovingAverageAlgorithm",
     "algorithm-language": "Python",
     "data-folder": "/Lean/Data",
+    "algorithm-manager-time-loop-maximum": 600,
     "result-handler": "QuantConnect.Lean.Engine.Results.BacktestingResultHandler",
     "real-time-handler": "QuantConnect.Lean.Engine.RealTime.BacktestingRealTimeHandler",
     "transaction-handler": "QuantConnect.Lean.Engine.TransactionHandlers.BacktestingTransactionHandler",
@@ -22,12 +23,14 @@
     "cache-location": "/Lean/Cache", 
     "lean-manager-type": "LocalLeanManager",
     "log-level": "debug",
+    "debug-mode": true,
+    "trace-level": "DEBUG",
     "parameters": {
         "ShortMAPeriod": "50",
-        "LongMAPeriod": "200",
-        "StartDate": "2023-01-01",
-        "EndDate": "2023-12-31",
+        "LongMAPeriod": "50",
+        "StartDate": "2020-07-01",
+        "EndDate": "2020-07-02",
         "InitialCash": "100000",
-        "Stock":"AAPL"
+        "Stock":"TSLA"
     }
 }

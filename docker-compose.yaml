@@ -97,13 +97,13 @@ services:
   #     - CELERY_BROKER_URL=redis://redis:6379/0
   #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
   #   command: celery -A risk_service worker --loglevel=info  
-  # leanengine:
-  #   image: leanimg20:latest  # Use the pre-built Docker image
-  #   container_name: lean-engine
-  #   environment:
-  #     - PYTHONUNBUFFERED=1  # Optional: ensures Python output is not buffered
-  #   tty: true  # Keeps the container running for further commands
-  #   network_mode: "host"
+  leanengine:
+    image: leanimg21:latest  # Use the pre-built Docker image
+    container_name: lean-engine
+    environment:
+      - PYTHONUNBUFFERED=1  # Optional: ensures Python output is not buffered
+    tty: true  # Keeps the container running for further commands
+    network_mode: "host"
   
   tradingplatform:
     build:

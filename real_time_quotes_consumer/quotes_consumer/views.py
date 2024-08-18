@@ -171,6 +171,7 @@ async def run_backtest_ws(strategy_id):
                         "total_return": data.get("data", {}).get("total_return", 0.0),
                         "start_date": data.get("data", {}).get("start_date", ""),
                         "end_date": data.get("data", {}).get("end_date", ""),
+                        "stock": data.get("stock", {}).get("stock", ""),
                     }
 
                     # Send the data to the external service using a separate thread

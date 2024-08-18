@@ -112,6 +112,7 @@ def api_strategy_detail(request, strategy_id):
     strategy_data = {
         "id": strategy.id,
         "name": strategy.name,
+        "stock": strategy.stock,
         "short_ma_period": strategy.short_ma_period,
         "long_ma_period": strategy.long_ma_period,
         "stop_loss": strategy.stop_loss,
@@ -134,6 +135,7 @@ def store_strategy(request):
 
         # Extract the parameters sent from Service A
         name = request.POST.get('name')
+        stock = request.POST.get('stock')
         short_ma_period = request.POST.get('short_ma_period')
         long_ma_period = request.POST.get('long_ma_period')
         stop_loss = request.POST.get('stop_loss')
@@ -143,6 +145,7 @@ def store_strategy(request):
         # Create and save the strategy in the database
         strategy = StrategyConfig(
             name=name,
+            stock=stock,
             short_ma_period=short_ma_period,
             long_ma_period=long_ma_period,
             stop_loss=stop_loss,

@@ -39,6 +39,7 @@ class BacktestConsumer(AsyncWebsocketConsumer):
         try:
             # Get the strategy configuration
             strategy_data = await self.fetch_strategy_config(strategy_id)
+            print(f"strategy_data--------------------------->{strategy_data}")
             if not strategy_data:
                 return
 
@@ -142,7 +143,7 @@ class BacktestConsumer(AsyncWebsocketConsumer):
             await self.send_message({'success': False, 'error': f"Error copying config.json to container: {str(e)}"})
             return False
     async def run_lean_engine(self, container_name):
-        """Run the Lean engine DLL inside the Docker container."""
+        """Run the Lean engine DLL inside the Docker container and return the result."""
         try:
             container = self.client.containers.get(container_name)
             exec_result = container.exec_run(
@@ -151,10 +152,26 @@ class BacktestConsumer(AsyncWebsocketConsumer):
                 stderr=True
             )
 
+            logs = container.logs()
+            print(f"Container logs: {logs.decode().strip()}")
+
             if exec_result.exit_code != 0:
                 error_message = exec_result.output.decode().strip()
                 await self.send_message({'success': False, 'error': error_message})
                 return False
+
+            # Process the output
+            engine_output = exec_result.output.decode().strip()
+            print(f"engine_output----------------------->{engine_output}")
+
+            # Assuming the engine returns JSON formatted results
+            try:
+                backtest_results = json.loads(engine_output)
+                print(f"backtest_results----------------------->{backtest_results}")
+                await self.send_message({'success': True, 'data': backtest_results})
+            except json.JSONDecodeError:
+                await self.send_message({'success': False, 'error': 'Failed to parse Lean engine output as JSON.'})
+
             return True
         except DockerException as e:
             await self.send_message({'success': False, 'error': f"Error running Lean engine: {str(e)}"})

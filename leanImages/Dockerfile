@@ -8,7 +8,7 @@ ENV PYTHONPATH=/Lean/Algorithm.Python:/Lean
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/mono:/usr/lib/x86_64-linux-gnu:/usr/lib/libmono-2.0.so.1
 ENV PYTHONNET_RUNTIME=coreclr
 
-# Copy the Lean directory from the local machine to the Docker container
+# # Copy the Lean directory from the local machine to the Docker container
 COPY ./Lean /Lean
 
 
@@ -25,7 +25,8 @@ RUN apt-get purge -y git && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.nuget /root/.dotnet
 
 # Stage 2: Final image
-FROM mcr.microsoft.com/dotnet/sdk:6.0-focal AS final
+# FROM mcr.microsoft.com/dotnet/sdk:6.0-focal AS final
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-focal AS final
 
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 ENV LC_ALL=C.UTF-8
@@ -50,13 +51,13 @@ RUN python3 -m pip install --no-cache-dir setuptools wheel pythonnet pandas nump
 
 # Copy necessary runtime files from the build stage
 COPY --from=build-env /Lean/build /Lean/
+COPY --from=build-env /Lean /Lean/
 
-# Explicitly copy the market-hours directory and file to the correct location
-COPY ./Lean /Lean
-# Explicitly copy the Python algorithm file to the correct directory
-COPY ./Lean/Algorithm.Python/* /Lean/Algorithm.Python/
-# Remove unnecessary directories to reduce the image size
-# Remove unnecessary directories to reduce the image size
+# Set proper permissions for the entire Lean directory
+RUN chmod -R 755 /Lean
+
+RUN ls -l /Lean/Data/equity/usa/
+RUN rm -rf /Lean/Launcher/bin /Lean/Launcher/build-output
 RUN rm -rf /Lean/Tests/ \
            /Lean/Documentation/ \
            /Lean/Research/ \
@@ -85,74 +86,12 @@ RUN apt-get purge -y --auto-remove && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache /usr/share/doc /usr/share/man /usr/share/locale /usr/share/info /usr/share/gnome/help
 
 # Set the entry point for the Docker container
-CMD ["dotnet", "/Lean/QuantConnect.Lean.Launcher.dll"]
+CMD ["dotnet", "QuantConnect.Lean.Launcher.dll", "--config", "config.json"]
 
 
 
 
 
-# # Stage 1: Build environment
-# FROM mcr.microsoft.com/dotnet/sdk:6.0-focal AS build-env
-
-# ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
-# ENV LC_ALL=C.UTF-8
-# ENV PYTHONNET_PYDLL=/usr/lib/x86_64-linux-gnu/libpython3.8.so
-# ENV PYTHONPATH=/Lean/Algorithm.Python:/Lean
-# ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/mono:/usr/lib/x86_64-linux-gnu:/usr/lib/libmono-2.0.so.1
-# ENV PYTHONNET_RUNTIME=coreclr
-
-# # Debug: Print environment variables
-# RUN echo "PYTHONPATH is set to: $PYTHONPATH" && \
-#     echo "LD_LIBRARY_PATH is set to: $LD_LIBRARY_PATH"
-
-# # Copy the Lean directory from the local machine to the Docker container
-# COPY ./Lean /Lean
-
-# # Restore NuGet packages and build the solution
-# RUN dotnet restore /Lean/QuantConnect.Lean.sln && \
-#     dotnet build /Lean/QuantConnect.Lean.sln -c Release --output /Lean/build
-
-# # Clean up unnecessary files
-# RUN apt-get purge -y git && \
-#     apt-get autoremove -y && \
-#     apt-get clean && \
-#     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# COPY config.json /Lean/build/
-
-# # Stage 2: Final image
-# FROM mcr.microsoft.com/dotnet/aspnet:6.0-focal AS final
-
-# ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
-# ENV LC_ALL=C.UTF-8
-# ENV PYTHONNET_PYDLL=/usr/lib/x86_64-linux-gnu/libpython3.8.so
-# ENV PYTHONPATH=/Lean/Algorithm.Python:/Lean
-# ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/mono:/usr/lib/x86_64-linux-gnu:/usr/lib/libmono-2.0.so.1
-# ENV PYTHONNET_RUNTIME=coreclr
-
-# WORKDIR /Lean
-
-# # Install necessary dependencies in a single layer and remove the package lists to reduce size
-# RUN apt-get update && \
-#     apt-get install -y python3-pip mono-complete && \
-#     rm -rf /var/lib/apt/lists/*
-
-# # Install Python dependencies in a single layer
-# RUN python3 -m pip install --no-cache-dir setuptools wheel pythonnet pandas numpy quantconnect
-
-# # Debug: Verify Python.NET installation
-# RUN python3 -c "import clr; print('Python.NET is working')" && \
-#     python3 -m pip list
-
-# # Copy necessary runtime files from the build stage
-# COPY --from=build-env /Lean /Lean
-# COPY --from=build-env /Lean/build /Lean/
-
-# # Debug: Check if files are copied correctly
-# RUN echo "Listing /Lean directory after copying from build-env:" && ls -l /Lean
-
-# # Set the entry point for the Docker container
-# CMD ["dotnet", "/Lean/QuantConnect.Lean.Launcher.dll"]
 
 
 

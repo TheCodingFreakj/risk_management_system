@@ -1,6 +1,7 @@
 import math
 import os
 import random
+import re
 import uuid
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -141,12 +142,31 @@ def run_backtest(request):
             asyncio.set_event_loop(loop)
 
         # Trigger the WebSocket communication to Service B
-        loop.run_until_complete(run_backtest_ws(strategy_id))
+        result = loop.run_until_complete(run_backtest_ws(strategy_id))
 
-        return JsonResponse({'success': True, 'message': 'Backtest initiated'})
+        return JsonResponse({'success': True, 'message': result})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+def extract_statistics_dict(log_lines):
+    statistics = {}
 
+    for line in log_lines:
+        if line.startswith("STATISTICS::"):
+            # Extract the entire statistics line after "STATISTICS::"
+            match = re.search(r'STATISTICS::\s*(.*)', line)
+            if match:
+                stat_line = match.group(1).strip()
+
+                # Split the stat_line into the stat name and stat value
+                if ' ' in stat_line:
+                    stat_name, stat_value = stat_line.rsplit(' ', 1)
+                    stat_name = stat_name.strip()
+                    stat_value = stat_value.strip()
+
+                    # Add to the dictionary
+                    statistics[stat_name] = stat_value
+
+    return statistics
 async def run_backtest_ws(strategy_id):
     uri = "ws://tradingplatform:8010/ws/backtest/"
     try:
@@ -157,30 +177,46 @@ async def run_backtest_ws(strategy_id):
             # Listen for messages from Service B
             while True:
                 response = await websocket.recv()
-                data = json.loads(response)
+                resDict = json.loads(response)
+                print(f"resDict----------------->{type(resDict)}")
 
-                if data.get('success'):
-                    print("Backtest successful:", data.get('data'))
 
-                    # Prepare the data to be sent to the external service for saving the backtest
-                    backtest_data = {
-                        "strategy_id": strategy_id,
-                        "equity_curve": data.get("data", {}).get("equity_curve", []),
-                        "sharpe_ratio": data.get("data", {}).get("sharpe_ratio", 0.0),
-                        "max_drawdown": data.get("data", {}).get("max_drawdown", 0.0),
-                        "total_return": data.get("data", {}).get("total_return", 0.0),
-                        "start_date": data.get("data", {}).get("start_date", ""),
-                        "end_date": data.get("data", {}).get("end_date", ""),
-                        "stock": data.get("stock", {}).get("stock", ""),
-                    }
 
-                    # Send the data to the external service using a separate thread
-                    await asyncio.get_event_loop().run_in_executor(
-                        None, save_backtest_results, backtest_data
-                    )
-                    break
+  
+                
+                if isinstance(resDict, dict):
+                    if resDict["success"]:
+                            
+                            if isinstance(resDict, dict):
+                                req = resDict["data"]
+                                res = extract_statistics_dict(req)
+                                print(f"res---------------------> {res}")
+                                return res
+                            else:
+                                print("resDict['data'] is not a dictionary.")
+                            
+#{'Total Orders': '2', 'Average Win': '0%', 'Average Loss': '0%', 'Compounding Annual Return': '0%', 'Drawdown': '0%', 'Expectancy': '0', 'Start Equity': '100000', 'End Equity': '100000', 'Net Profit': '0%', 'Sharpe Ratio': '0', 'Sortino Ratio': '0', 'Probabilistic Sharpe Ratio': '0%', 'Loss Rate': '0%', 'Win Rate': '0%', 'Profit-Loss Ratio': '0', 'Alpha': '0', 'Beta': '0', 'Annual Standard Deviation': '0', 'Annual Variance': '0', 'Information Ratio': '-1.678', 'Tracking Error': '0.113', 'Treynor Ratio': '0', 'Total Fees': '$0.00', 'Estimated Strategy Capacity': '$0', 'Lowest Capacity': 'Asset', 'Portfolio Turnover': '0%', 'OrderListHash': 'a7ba33ccea347f7db87f23fd71e81111'}
+                        # # Prepare the data to be sent to the external service for saving the backtest
+                        # backtest_data = {
+                        #     "strategy_id": strategy_id,
+                        #     "equity_curve": data.get("data", {}).get("equity_curve", []),
+                        #     "sharpe_ratio": res.get("data", {}).get("sharpe_ratio", 0.0),
+                        #     "max_drawdown": data.get("data", {}).get("max_drawdown", 0.0),
+                        #     "total_return": data.get("data", {}).get("total_return", 0.0),
+                        #     "stock": data.get("stock", {}).get("stock", ""),
+                        #     "start_date": data.get("data", {}).get("start_date", ""),
+                        #     "end_date": data.get("data", {}).get("end_date", ""),
+                        # }
+
+                        # # Send the data to the external service using a separate thread
+                        # await asyncio.get_event_loop().run_in_executor(
+                        #     None, save_backtest_results, backtest_data
+                        # )
+                        # break
+                    else:
+                        print("Update or error:", resDict["error"])
                 else:
-                    print("Update or error:", data.get('error'))
+                        print("response is not a dictionary.")        
     except Exception as e:
         print(f"WebSocket communication failed: {str(e)}")
 
@@ -195,99 +231,7 @@ def save_backtest_results(backtest_data):
             print(f"Failed to save backtest results: {response.text.strip()}")
     except Exception as e:
         print(f"Failed to save backtest results: {str(e)}")
-# @csrf_exempt
-# def run_backtest(request, strategy_id):
-#     print(f"strategy_id---------------->{strategy_id}")
-    
-#     try:
-#             # External service URL to get strategy configuration
-#             strategy_url = f"http://tradingplatform:8010/api/strategy/{strategy_id}/"
 
-#             # Fetch the strategy configuration from the external service
-#             strategy_response = requests.get(strategy_url)
-#             if strategy_response.status_code == 200:
-#                 strategy_data = strategy_response.json()
-#             else:
-#                 return JsonResponse({'success': False, 'error': 'Strategy not found'}, status=404)
-#             print(f"strategy_data-------------------->{strategy_data}")
-#             # Extract strategy details
-#             algorithm_name = strategy_data.get('name', 'MovingAverageCrossAlgorithm')
-#             start_date = strategy_data.get('start_date', '2024-01-01')
-#             end_date = strategy_data.get('end_date', '2024-06-01')
-#             short_ma_period = strategy_data.get('short_ma_period')
-#             long_ma_period = strategy_data.get('long_ma_period')
-#             max_drawdown = strategy_data.get('max_drawdown')
-#             print(f"strategy_data-------------------->{algorithm_name}")
-#             # Generate a unique identifier for the backtest
-#             backtest_id = str(uuid.uuid4())
-#             config_data =   {
-#     "algorithm-type-name": algorithm_name,
-#     "algorithm-language": "Python",
-#     "data-folder": "/app/Lean/Data",
-#     "results-folder": f"/app/Lean/Results/{backtest_id}",
-#     "log-folder": "/app/Lean/Logs",
-#     "parameters": {
-#         "ShortMAPeriod": short_ma_period,
-#         "LongMAPeriod": long_ma_period,
-#         "StartDate": start_date,
-#         "EndDate": end_date,
-#         "InitialCash": max_drawdown
-#     }
-#             }
-#             # curl -X POST http://tradingplatform:8010/run_backtest_backend/ -H "Content-Type: application/json" -d '{"key":"value"}'
-
-          
-#             print(f"It is reaching here--------------------------->")
-#             # Trigger the Lean Engine backtest via HTTP request
-#             lean_service_url = "http://tradingplatform:8010/run_backtest_backend/"
-           
-#             print(f"It is reaching here------------------->")
-#             response = None
-#             try:
-#                 # Headers you want to include in the request
-#                 headers = {
-#                     "Content-Type": "application/json",  # Specify the content type
-#                 }
-#                 print(f"It is reaching here------------------->{lean_service_url}")
-#                 response = requests.post(lean_service_url, json=config_data,headers=headers, timeout=100)  # 10-second timeout
-#                 print(f"It is reaching here------------------->{response.raise_for_status()}")
-#                 response.raise_for_status()  # Raises HTTPError if the status is 4xx, 5xx
-                
-#                 print("Request successful:", response.json())
-#             except requests.exceptions.RequestException as e:
-#                 print("Request failed:", e)
-#             print(f"response--------------------------->{response}")
-#             if response.status_code == 200:
-#                 backtest_results = response.json()
-#             else:
-#                 return JsonResponse({'success': False, 'error': f"Failed to trigger backtest: {response.text.strip()}"}, status=500)
-
-#             # Prepare the data to be sent to the external service for saving the backtest
-#             backtest_data = {
-#                 "strategy_id": strategy_id,
-#                 "equity_curve": backtest_results.get("equity_curve", []),
-#                 "sharpe_ratio": backtest_results.get("sharpe_ratio", 0.0),
-#                 "max_drawdown": backtest_results.get("max_drawdown", 0.0),
-#                 "total_return": backtest_results.get("total_return", 0.0),
-#                 "start_date": backtest_results.get("start_date", ""),
-#                 "end_date": backtest_results.get("end_date", ""),
-#             }
-
-#             # Send the data to the external service
-#             external_service_url = "http://tradingplatform:8010/api/save_backtest/"
-#             response = requests.post(external_service_url, json=backtest_data)
-
-#             # Check the response from the external service
-#             if response.status_code == 200:
-#                 result_id = response.json().get("result_id")
-#                 return JsonResponse({'success': True, 'result_id': result_id})
-#             else:
-#                 return JsonResponse({'success': False, 'error': f"Failed to save backtest results: {response.text.strip()}"}, status=500)
-
-#     except Exception as e:
-#             return JsonResponse({'success': False, 'error': f"An error occurred for run_backtest: {str(e)}"}, status=500)
-
-    
 
 
 @csrf_exempt
@@ -306,6 +250,9 @@ def receive_request(request):
         stop_loss = data.get('stop_loss')
         take_profit = data.get('take_profit')
         max_drawdown = data.get('max_drawdown')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        stock = data.get('stock')
         # Capture parameters from the frontend request
         params = {
             'name': name,
@@ -313,7 +260,10 @@ def receive_request(request):
             'long_ma_period': long_ma_period,
             'stop_loss': stop_loss,
             'take_profit': take_profit,
-            'max_drawdown': max_drawdown
+            'max_drawdown': max_drawdown,
+            'stock':stock,
+            'start_date': start_date,
+            'end_date': end_date,
         }
 
         print(f"params---------------------> {params}")

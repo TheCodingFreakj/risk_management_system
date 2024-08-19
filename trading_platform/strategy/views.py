@@ -17,16 +17,22 @@ class StrategyConfigDetail(APIView):
         try:
                
             strategy = StrategyConfig.objects.get(id=strategy_id)
-            data = {
-                'name': strategy.name,
-                'short_ma_period': strategy.short_ma_period,
-                'long_ma_period': strategy.long_ma_period,
-                'stop_loss': strategy.stop_loss,
-                'take_profit': strategy.take_profit,
-                'max_drawdown': strategy.max_drawdown,
-                'stock':strategy.stock
-            }
-            return Response(data, status=status.HTTP_200_OK)
+            strategy_data = {
+        "id": strategy.id,
+        "name": strategy.name,
+        "stock": strategy.stock,
+        "short_ma_period": strategy.short_ma_period,
+        "long_ma_period": strategy.long_ma_period,
+        "stop_loss": strategy.stop_loss,
+        "take_profit": strategy.take_profit,
+        "max_drawdown": strategy.max_drawdown,
+        "created_at": strategy.created_at,
+        "updated_at": strategy.updated_at,
+        'start_date':strategy.start_date,
+        'end_date':strategy.end_date
+    }
+
+            return Response(strategy_data, status=status.HTTP_200_OK)
         except StrategyConfig.DoesNotExist:
             return Response({'error': 'Strategy not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -106,23 +112,25 @@ def home(request):
     
    
 
-def api_strategy_detail(request, strategy_id):
-    strategy = get_object_or_404(StrategyConfig, id=strategy_id)
+# def api_strategy_detail(request, strategy_id):
+#     strategy = get_object_or_404(StrategyConfig, id=strategy_id)
 
-    strategy_data = {
-        "id": strategy.id,
-        "name": strategy.name,
-        "stock": strategy.stock,
-        "short_ma_period": strategy.short_ma_period,
-        "long_ma_period": strategy.long_ma_period,
-        "stop_loss": strategy.stop_loss,
-        "take_profit": strategy.take_profit,
-        "max_drawdown": strategy.max_drawdown,
-        "created_at": strategy.created_at,
-        "updated_at": strategy.updated_at,
-    }
+#     strategy_data = {
+#         "id": strategy.id,
+#         "name": strategy.name,
+#         "stock": strategy.stock,
+#         "short_ma_period": strategy.short_ma_period,
+#         "long_ma_period": strategy.long_ma_period,
+#         "stop_loss": strategy.stop_loss,
+#         "take_profit": strategy.take_profit,
+#         "max_drawdown": strategy.max_drawdown,
+#         "created_at": strategy.created_at,
+#         "updated_at": strategy.updated_at,
+#         'start_date':strategy.start_date,
+#         'end_date':strategy.end_date
+#     }
 
-    return JsonResponse(strategy_data)
+#     return JsonResponse(strategy_data)
 
 
 
@@ -141,16 +149,19 @@ def store_strategy(request):
         stop_loss = request.POST.get('stop_loss')
         take_profit = request.POST.get('take_profit')
         max_drawdown = request.POST.get('max_drawdown')
-
+        end_date = request.POST.get('end_date')
+        start_date = request.POST.get('start_date')
         # Create and save the strategy in the database
         strategy = StrategyConfig(
             name=name,
-            stock=stock,
             short_ma_period=short_ma_period,
             long_ma_period=long_ma_period,
             stop_loss=stop_loss,
             take_profit=take_profit,
-            max_drawdown=max_drawdown
+            max_drawdown=max_drawdown,
+            stock=stock,
+            start_date=start_date,
+            end_date=end_date
         )
         strategy.save()
 

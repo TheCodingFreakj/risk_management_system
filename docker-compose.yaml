@@ -98,12 +98,14 @@ services:
   #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
   #   command: celery -A risk_service worker --loglevel=info  
   leanengine:
-    image: leanimg21:latest  # Use the pre-built Docker image
+    image: leanimage:latest  # Use the pre-built Docker image
     container_name: lean-engine
     environment:
       - PYTHONUNBUFFERED=1  # Optional: ensures Python output is not buffered
     tty: true  # Keeps the container running for further commands
     network_mode: "host"
+    # logging:
+    #   driver: "none"
   
   tradingplatform:
     build:
@@ -116,7 +118,7 @@ services:
     user: root
     depends_on:
       - redis 
-      - leanengine
+      # - leanengine
     environment:
       DJANGO_SETTINGS_MODULE: "trading_platform.settings"
       DJANGO_SECRET_KEY: "django-insecure-(3bskg&j@=%0u1t!(7g4=f#q&ulj*z2&^hr3($l)2@d*i&w^ae"

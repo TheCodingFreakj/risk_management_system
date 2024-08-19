@@ -10,6 +10,8 @@ class StrategyConfig(models.Model):
     max_drawdown = models.FloatField(default=0.2, help_text="Maximum drawdown percentage")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    start_date = models.DateField(help_text="Start date of the strategy")
+    end_date = models.DateField(help_text="End date of the strategy")
 
     def __str__(self):
         return f"{self.name} (Short MA: {self.short_ma_period}, Long MA: {self.long_ma_period})"

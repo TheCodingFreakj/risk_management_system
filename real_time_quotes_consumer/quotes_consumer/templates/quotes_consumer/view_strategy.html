@@ -1,65 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ strategy.name }} - Strategy Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+        }
+
+        h1 {
+            border-bottom: 2px solid #03111b;
+            padding-bottom: 10px;
+        }
+
+        p {
+            font-size: 18px;
+            line-height: 1.5;
+            margin: 10px 0;
+        }
+
+        #stats h3 {
+            color: #2c3e50;
+            margin-top: 20px;
+        }
+
+        #stats ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #stats li {
+            background-color: #ecf0f1;
+            margin: 5px 0;
+            padding: 10px;
+            border-left: 5px solid #285f81;
+            border-radius: 3px;
+            font-size: 16px;
+        }
+
+        form {
+            margin-top: 30px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .strategy-details {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .stat-item {
+        background-color: #ecf0f1;
+        padding: 10px;
+        border-left: 5px solid #3498db;
+        border-radius: 3px;
+        font-size: 16px;
+    }
+    </style>
 </head>
+
 <body>
-    <h1>Strategy: {{ strategy.name }}</h1>
-    <p>Short MA Period: {{ strategy.short_ma_period }}</p>
-    <p>Long MA Period: {{ strategy.long_ma_period }}</p>
-    <p>Stop Loss: {{ strategy.stop_loss }}%</p>
-    <p>Take Profit: {{ strategy.take_profit }}%</p>
-    <p>Max Drawdown: {{ strategy.max_drawdown }}%</p>
+    <div class="strategy-details">
+        <h1>Strategy: {{ strategy.name }}</h1>
+        <p>Short MA Period: {{ strategy.short_ma_period }}</p>
+        <p>Long MA Period: {{ strategy.long_ma_period }}</p>
+        <p>Stop Loss: {{ strategy.stop_loss }}%</p>
+        <p>Take Profit: {{ strategy.take_profit }}%</p>
+        <p>Max Drawdown: {{ strategy.max_drawdown }}%</p>
+        <p>Start Time: {{ strategy.start_time }}</p>
+        <p>End Time: {{ strategy.end_time }}</p>
 
-    <h2>Backtest Results</h2>
-    <ul>
-        {% for backtest in backtests %}
-        <li>Backtest from {{ backtest.start_date }} to {{ backtest.end_date }} - Return: {{ backtest.total_return }}%</li>
-        {% empty %}
-        <li>No backtests available for this strategy.</li>
-        {% endfor %}
-    </ul>
+        <h2>Backtest Results</h2>
+        <div id="stats"></div>
 
-    <!-- Form to trigger a backtest -->
-    <form id="backtestForm" action="{% url 'run_backtest' %}" method="post">
-        {% csrf_token %}
-        <!-- Hidden input to send the strategy_id -->
-        <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
-        <button type="submit">Run Backtest</button>
-    </form>
+        <!-- Form to trigger a backtest -->
+        <form id="backtestForm" action="{% url 'run_backtest' %}" method="post">
+            {% csrf_token %}
+            <!-- Hidden input to send the strategy_id -->
+            <input type="hidden" name="strategy_id" value="{{ strategy.id }}">
+            <button type="submit">Run Backtest</button>
+        </form>
+    </div>
 
     <script>
-        document.getElementById('backtestForm').addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent the default form submission
+        document.getElementById('backtestForm').addEventListener('submit', function (event) {
+            event.preventDefault(); // Prevent the default form submission
 
-    const strategyId = document.querySelector('input[name="strategy_id"]').value;
+            const strategyId = document.querySelector('input[name="strategy_id"]').value;
 
-    // Prepare the data to be sent as JSON
-    const data = {
-        strategy_id: strategyId
-    };
+            // Prepare the data to be sent as JSON
+            const data = {
+                strategy_id: strategyId
+            };
 
-    // Send the data using AJAX
-    fetch("{% url 'run_backtest' %}", {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}', // Include CSRF token in the headers
-        },
-        body: JSON.stringify(data) // Convert the data to JSON
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Backtest initiated:', data);
-        // Handle the response here
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-});
+            // Send the data using AJAX
+            fetch("{% url 'run_backtest' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}', // Include CSRF token in the headers
+                },
+                body: JSON.stringify(data) // Convert the data to JSON
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Backtest initiated:', data);
+                    // Check if the data is successful
+                    if (data.success) {
+                        // Extract the message object
+                        const statistics = data.message;
+
+                        let html = "<h3>Backtest Statistics</h3><div class='stats-grid'>";
+for (const [key, value] of Object.entries(statistics)) {
+    html += `<div class="stat-item"><strong>${key}</strong>: ${value}</div>`;
+}
+html += "</div>";
+
+                        // Assuming you have a div with id="stats" in your HTML
+                        document.getElementById("stats").innerHTML = html;
+                    } else {
+                        console.log("No data available or an error occurred.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
     </script>
-    
+
 </body>
+
 </html>

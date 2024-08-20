@@ -111,3 +111,11 @@ docker run -it <your-docker-image-name> /bin/bash
 
 
 
+"parameters": {
+        "Stock": "AAPL",
+        "ShortMAPeriod": "20",
+        "LongMAPeriod": "50",
+        "StartDate": "2020-01-01",
+        "EndDate": "2023-01-01",
+        "InitialCash": "200000"
+    },

@@ -241,8 +241,22 @@ class BacktestConsumer(AsyncWebsocketConsumer):
             for log_line in additional_logs:
                 self.logs.append(log_line)
             
-            await self.send_message({'success': True, 'data': self.logs})
-
+            # Combine all logs into a single string (if needed)
+            full_log = "\n".join(self.logs)
+            # Adjust this based on the WebSocket server's limits
+            # Split the full log into chunks
+            chunk_size = 1000  
+            chunks = [full_log[i:i+chunk_size] for i in range(0, len(full_log), chunk_size)]
+            # Optional: Small delay to avoid overwhelming the WebSocket server
+            # Send each chunk separately
+            for i, chunk in enumerate(chunks):
+                message = {
+                    'success': True,
+                    'data': chunk,
+                    'last_chunk': i == len(chunks) - 1  # Set this to True for the last chunk
+                }
+                await self.send_message(message)
+                await asyncio.sleep(0.1)  
         except DockerException as e:
             await self.send_message({'success': False, 'error': f"Error running Lean engine: {str(e)}"})
             return False

@@ -2,6 +2,7 @@ import math
 import os
 import random
 import re
+import signal
 import uuid
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerError, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -122,7 +123,7 @@ from django.http import JsonResponse
 import asyncio
 import websockets
 import json
-
+shutdown_event = asyncio.Event()
 def run_backtest(request):
     try:
         # Parse the incoming request to get the strategy_id
@@ -132,93 +133,130 @@ def run_backtest(request):
 
         if not strategy_id:
             return JsonResponse({'success': False, 'error': 'strategy_id is required'}, status=400)
-
-        # Get or create an event loop
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            # No current event loop in this thread, so we create a new one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+           result =  loop.run_until_complete(run_backtest_ws(strategy_id))
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+        # # Ensure we are in the main thread
+        # if threading.current_thread() is threading.main_thread():
+        #     try:
+        #         # Get the current event loop or create a new one if none exists
+        #         loop = asyncio.get_event_loop()
+        #     except RuntimeError:
+        #         # No event loop in this thread, create a new one
+        #         loop = asyncio.new_event_loop()
+        #         asyncio.set_event_loop(loop)
 
-        # Trigger the WebSocket communication to Service B
-        result = loop.run_until_complete(run_backtest_ws(strategy_id))
+        #     for sig in (signal.SIGINT, signal.SIGTERM):
+        #         loop.add_signal_handler(sig, handle_shutdown, sig, loop)
 
+        #     try:
+        #         loop.run_until_complete(run_backtest_ws(strategy_id))
+        #     finally:
+        #         loop.run_until_complete(loop.shutdown_asyncgens())
+        #         loop.close()
+        # else:
+        #     raise RuntimeError("Signal handling must be set up in the main thread")
+            # Get or create an event loop
+        # try:
+        #     loop = asyncio.get_event_loop()
+        # except RuntimeError:
+        #     # No current event loop in this thread, so we create a new one
+        #     loop = asyncio.new_event_loop()
+        #     asyncio.set_event_loop(loop)
+
+        # for sig in (signal.SIGINT, signal.SIGTERM):
+        #     loop.add_signal_handler(sig, handle_shutdown, sig, loop)
+
+        # try:
+        #     loop.run_until_complete(run_backtest_ws("strategy_id_here"))
+        # finally:
+        #     loop.run_until_complete(loop.shutdown_asyncgens())
+        #     loop.close() 
         return JsonResponse({'success': True, 'message': result})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-def extract_statistics_dict(log_lines):
+def extract_statistics_dict(data_list):
     statistics = {}
+    # print(f"data_list------------------------>{data_list}")
+    if data_list:
+    #     # Split the string at newline characters
+          log_lines = data_list.split('\n')
+          
+          for line in log_lines:
+            print(f"log_lines------------------------>{line}")
+            if line.startswith("STATISTICS::"):
+                # Extract the entire statistics line after "STATISTICS::"
+                match = re.search(r'STATISTICS::\s*(.*)', line)
+                if match:
+                    stat_line = match.group(1).strip()
 
-    for line in log_lines:
-        if line.startswith("STATISTICS::"):
-            # Extract the entire statistics line after "STATISTICS::"
-            match = re.search(r'STATISTICS::\s*(.*)', line)
-            if match:
-                stat_line = match.group(1).strip()
+                    # Split the stat_line into the stat name and stat value
+                    if ' ' in stat_line:
+                        stat_name, stat_value = stat_line.rsplit(' ', 1)
+                        stat_name = stat_name.strip()
+                        stat_value = stat_value.strip()
 
-                # Split the stat_line into the stat name and stat value
-                if ' ' in stat_line:
-                    stat_name, stat_value = stat_line.rsplit(' ', 1)
-                    stat_name = stat_name.strip()
-                    stat_value = stat_value.strip()
-
-                    # Add to the dictionary
-                    statistics[stat_name] = stat_value
+                        # Add to the dictionary
+                        statistics[stat_name] = stat_value
 
     return statistics
+
+def handle_shutdown(signal, loop):
+    print(f"Received exit signal {signal.name}...")
+    shutdown_event.set()
+
 async def run_backtest_ws(strategy_id):
     uri = "ws://tradingplatform:8010/ws/backtest/"
     try:
         async with websockets.connect(uri) as websocket:
             # Send the strategy ID to Service B
             await websocket.send(json.dumps({'strategy_id': strategy_id}))
-
+            # Buffer for storing message chunks
+            message_buffer = []
             # Listen for messages from Service B
-            while True:
-                response = await websocket.recv()
-                resDict = json.loads(response)
-                print(f"resDict----------------->{type(resDict)}")
+            while not shutdown_event.is_set():
+                try:
+                    # Set a timeout for receiving messages
+                    response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
+                    # print(f"Response received: {response}")
 
+                    resDict = json.loads(response)
+                    print(f"resDict type: {type(resDict)}")
 
+                    if isinstance(resDict, dict):
+                        if resDict.get("success"):
+                            # Append the chunk to the buffer
+                            message_buffer.append(resDict['data'])
 
-  
-                
-                if isinstance(resDict, dict):
-                    if resDict["success"]:
-                            
-                            if isinstance(resDict, dict):
-                                req = resDict["data"]
-                                res = extract_statistics_dict(req)
-                                print(f"res---------------------> {res}")
+                            # If it's the last chunk, process the full message
+                            if resDict.get('last_chunk', True):
+                                full_message = ''.join(message_buffer)
+                                # Process the complete message
+                                res = extract_statistics_dict(full_message)
+                                print(f"Processed result: {res}")
                                 return res
-                            else:
-                                print("resDict['data'] is not a dictionary.")
-                            
-#{'Total Orders': '2', 'Average Win': '0%', 'Average Loss': '0%', 'Compounding Annual Return': '0%', 'Drawdown': '0%', 'Expectancy': '0', 'Start Equity': '100000', 'End Equity': '100000', 'Net Profit': '0%', 'Sharpe Ratio': '0', 'Sortino Ratio': '0', 'Probabilistic Sharpe Ratio': '0%', 'Loss Rate': '0%', 'Win Rate': '0%', 'Profit-Loss Ratio': '0', 'Alpha': '0', 'Beta': '0', 'Annual Standard Deviation': '0', 'Annual Variance': '0', 'Information Ratio': '-1.678', 'Tracking Error': '0.113', 'Treynor Ratio': '0', 'Total Fees': '$0.00', 'Estimated Strategy Capacity': '$0', 'Lowest Capacity': 'Asset', 'Portfolio Turnover': '0%', 'OrderListHash': 'a7ba33ccea347f7db87f23fd71e81111'}
-                        # # Prepare the data to be sent to the external service for saving the backtest
-                        # backtest_data = {
-                        #     "strategy_id": strategy_id,
-                        #     "equity_curve": data.get("data", {}).get("equity_curve", []),
-                        #     "sharpe_ratio": res.get("data", {}).get("sharpe_ratio", 0.0),
-                        #     "max_drawdown": data.get("data", {}).get("max_drawdown", 0.0),
-                        #     "total_return": data.get("data", {}).get("total_return", 0.0),
-                        #     "stock": data.get("stock", {}).get("stock", ""),
-                        #     "start_date": data.get("data", {}).get("start_date", ""),
-                        #     "end_date": data.get("data", {}).get("end_date", ""),
-                        # }
-
-                        # # Send the data to the external service using a separate thread
-                        # await asyncio.get_event_loop().run_in_executor(
-                        #     None, save_backtest_results, backtest_data
-                        # )
-                        # break
+                        else:
+                            print("Update or error:", resDict.get("error"))
                     else:
-                        print("Update or error:", resDict["error"])
-                else:
-                        print("response is not a dictionary.")        
+                        print("Response is not a dictionary.")
+
+                except asyncio.TimeoutError:
+                    print("No message received within timeout, checking shutdown signal...")
+                    continue
+
     except Exception as e:
         print(f"WebSocket communication failed: {str(e)}")
+
+    finally:
+        if not websocket.closed:
+            await websocket.close()
+        print("WebSocket connection closed.")    
+
 
 def save_backtest_results(backtest_data):
     try:

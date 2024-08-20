@@ -98,9 +98,9 @@
         <p>Long MA Period: {{ strategy.long_ma_period }}</p>
         <p>Stop Loss: {{ strategy.stop_loss }}%</p>
         <p>Take Profit: {{ strategy.take_profit }}%</p>
-        <p>Max Drawdown: {{ strategy.max_drawdown }}%</p>
-        <p>Start Time: {{ strategy.start_time }}</p>
-        <p>End Time: {{ strategy.end_time }}</p>
+        <p>Max Drawdown: ${{ strategy.max_drawdown }}</p>
+        <p>Start Time: {{ strategy.start_date }}</p>
+        <p>End Time: {{ strategy.end_date }}</p>
 
         <h2>Backtest Results</h2>
         <div id="stats"></div>

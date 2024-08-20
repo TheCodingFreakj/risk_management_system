@@ -98,7 +98,7 @@ services:
   #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
   #   command: celery -A risk_service worker --loglevel=info  
   leanengine:
-    image: leanimage:latest  # Use the pre-built Docker image
+    image: dynamicmovingaveragecrossoveralgorithm:latest  # Use the pre-built Docker image
     container_name: lean-engine
     environment:
       - PYTHONUNBUFFERED=1  # Optional: ensures Python output is not buffered

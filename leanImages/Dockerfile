@@ -55,6 +55,7 @@ COPY --from=build-env /Lean /Lean/
 
 # Set proper permissions for the entire Lean directory
 RUN chmod -R 755 /Lean
+RUN ls -l /Lean/Data/alternative/interest-rate/usa/interest-rate.csv
 
 RUN ls -l /Lean/Data/equity/usa/
 RUN rm -rf /Lean/Launcher/bin /Lean/Launcher/build-output
@@ -73,10 +74,10 @@ RUN rm -rf /Lean/Tests/ \
            /Lean/.env \
            /Lean/*.user \
            /Lean/*.suo \
-           /Lean/Data/daily/ \
-           /Lean/Data/minute/ \
-           /Lean/Data/tick/ \
-           /Lean/Data/alternative/ \
+        #    /Lean/Data/daily/ \
+        #    /Lean/Data/minute/ \
+        #    /Lean/Data/tick/ \
+        #    /Lean/Data/alternative/ \
            /Lean/lib/
 COPY config.json /Lean/config.json
 RUN find / -name "libpython3.8.so" 2>/dev/null

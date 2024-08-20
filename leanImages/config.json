@@ -30,16 +30,9 @@
     "job-organization-id": "",
     "log-level": "trace",
     "debug-mode": true,
-    "results-destination-folder":"/Lean/Results",
+    "results-destination-folder": "/Lean/Results",
     "mute-python-library-logging": "False",
-    "parameters": {
-        "ShortMAPeriod": "50",
-        "LongMAPeriod": "200",
-        "StartDate": "2020-07-01",
-        "EndDate": "2021-07-20",
-        "InitialCash": "100000",
-        "Stock": "AAPL"
-    },
+    "history-provider": "SubscriptionDataReaderHistoryProvider",
     "python-additional-paths": [],
     "environments": {
         "backtesting": {
@@ -48,8 +41,18 @@
             "result-handler": "QuantConnect.Lean.Engine.Results.BacktestingResultHandler",
             "data-feed-handler": "QuantConnect.Lean.Engine.DataFeeds.FileSystemDataFeed",
             "real-time-handler": "QuantConnect.Lean.Engine.RealTime.BacktestingRealTimeHandler",
-            "history-provider": ["QuantConnect.Lean.Engine.HistoricalData.SubscriptionDataReaderHistoryProvider"],
+            "history-provider": [
+                "QuantConnect.Lean.Engine.HistoricalData.SubscriptionDataReaderHistoryProvider"
+            ],
             "transaction-handler": "QuantConnect.Lean.Engine.TransactionHandlers.BacktestingTransactionHandler"
         }
+    },
+    "parameters": {
+        "Stock": "AAPL",
+        "ShortMAPeriod": "20",
+        "LongMAPeriod": "50",
+        "StartDate": "2020-01-01",
+        "EndDate": "2023-01-01",
+        "InitialCash": "200000"
     }
 }

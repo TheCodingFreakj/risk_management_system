@@ -141,45 +141,11 @@ def run_backtest(request):
         finally:
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
-        # # Ensure we are in the main thread
-        # if threading.current_thread() is threading.main_thread():
-        #     try:
-        #         # Get the current event loop or create a new one if none exists
-        #         loop = asyncio.get_event_loop()
-        #     except RuntimeError:
-        #         # No event loop in this thread, create a new one
-        #         loop = asyncio.new_event_loop()
-        #         asyncio.set_event_loop(loop)
-
-        #     for sig in (signal.SIGINT, signal.SIGTERM):
-        #         loop.add_signal_handler(sig, handle_shutdown, sig, loop)
-
-        #     try:
-        #         loop.run_until_complete(run_backtest_ws(strategy_id))
-        #     finally:
-        #         loop.run_until_complete(loop.shutdown_asyncgens())
-        #         loop.close()
-        # else:
-        #     raise RuntimeError("Signal handling must be set up in the main thread")
-            # Get or create an event loop
-        # try:
-        #     loop = asyncio.get_event_loop()
-        # except RuntimeError:
-        #     # No current event loop in this thread, so we create a new one
-        #     loop = asyncio.new_event_loop()
-        #     asyncio.set_event_loop(loop)
-
-        # for sig in (signal.SIGINT, signal.SIGTERM):
-        #     loop.add_signal_handler(sig, handle_shutdown, sig, loop)
-
-        # try:
-        #     loop.run_until_complete(run_backtest_ws("strategy_id_here"))
-        # finally:
-        #     loop.run_until_complete(loop.shutdown_asyncgens())
-        #     loop.close() 
         return JsonResponse({'success': True, 'message': result})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    
 def extract_statistics_dict(data_list):
     statistics = {}
     # print(f"data_list------------------------>{data_list}")

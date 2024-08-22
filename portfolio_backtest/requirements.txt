@@ -1,0 +1,10 @@
+Django
+django-apscheduler
+requests
+djangorestframework
+psycopg2-binary
+python-dotenv
+pandas 
+numpy
+yfinance
+docker

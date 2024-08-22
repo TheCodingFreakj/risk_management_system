@@ -66,7 +66,7 @@ class BacktestConsumer(AsyncWebsocketConsumer):
             
             # Copy the config.json into the Docker container
             container_name = 'lean-engine'
-            config_file_path_in_container = '/Lean/config.json'
+            config_file_path_in_container = '/Lean/config-algo1.json'
             if not await self.copy_file_to_container(temp_config_path, container_name, config_file_path_in_container):
                 return
 
@@ -161,44 +161,7 @@ class BacktestConsumer(AsyncWebsocketConsumer):
         """Helper method to write config to a file."""
         with open(path, 'w') as f:
             json.dump(data, f, indent=4)
-    def capture_logs_with_timeout(self,container_name, timeout=10):
-        client = docker.from_env()
-        container = client.containers.get(container_name)
-        
-        log_stream = container.logs(stream=True)
-        last_log_time = time.time()
-
-        print(f"log_stream found: {log_stream}")
-        
-        try:
-            # for log in log_stream:
-            #     log_line = log.decode('utf-8').strip()
-            #     print(f"Captured Log: {log_line}")
-                
-                # Process the log line (e.g., check for "STATISTICS::")
-                if "STATISTICS::" in log_stream:
-                    print(f"Statistics found: {log_stream}")
-                
-                # Reset the timer since we received a new log
-                # last_log_time = time.time()
-                
-                # # If we want to exit the loop based on a specific condition:
-                # if self.some_condition_based_on_log(log_line):
-                #     break
-                
-                # # Check if the log stream has been quiet for longer than the timeout
-                # if time.time() - last_log_time > timeout:
-                #     print("No logs received for the timeout duration, stopping.")
-                #     break
-        except Exception as e:
-            print(f"An error occurred while capturing logs: {str(e)}")
-
-
-    def some_condition_based_on_log(self,log_line):
-        # Example condition to exit early (customize as needed)
-        return "Analysis Complete" in log_line           
-
-
+  
     async def copy_file_to_container(self, src_path, container_name, dest_path):
         """Copy a file from the host to a Docker container using a tar archive."""
         try:
@@ -264,46 +227,4 @@ class BacktestConsumer(AsyncWebsocketConsumer):
         """Helper method to send a message over WebSocket."""
         await self.send(json.dumps(message))
 
-
-    async def parse_stdout_output(self, stdout_output):
-        """Parse the stdout output to extract relevant information."""
-        output_lines = stdout_output.splitlines()
-        parsed_data = {}
-
-        print(f"total output_lines-------------------->{output_lines}")
-        
-        for line in output_lines:
-            print(f"outer output_lines------------------------> {line}")
-            
-            if "STATISTICS::" in line:
-                print(f"output_lines------------------------> {line}")
-                # Extract the entire statistics line after "STATISTICS::"
-                match = re.search(r'STATISTICS::\s*(.*)', line)
-                
-                if match:
-                    stat_line = match.group(1).strip()
-
-                    # Split the stat_line into the stat name and stat value
-                    if ' ' in stat_line:
-                        stat_name, stat_value = stat_line.rsplit(' ', 1)
-                        stat_name = stat_name.strip()
-                        stat_value = stat_value.strip()
-
-                        # Handle multiple occurrences by appending to a list
-                        if stat_name in parsed_data:
-                            if isinstance(parsed_data[stat_name], list):
-                                parsed_data[stat_name].append(stat_value)
-                            else:
-                                parsed_data[stat_name] = [parsed_data[stat_name], stat_value]
-                        else:
-                            parsed_data[stat_name] = stat_value
-        
-        return json.dumps(parsed_data)
-
-
-
-
-    async def send_message(self, message):
-        """Helper method to send a message over WebSocket."""
-        await self.send(json.dumps(message))    
-
+   

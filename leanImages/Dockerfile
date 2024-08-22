@@ -28,6 +28,16 @@ RUN apt-get purge -y git && \
 # FROM mcr.microsoft.com/dotnet/sdk:6.0-focal AS final
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-focal AS final
 
+
+# Add Microsoft package repository for .NET
+RUN apt-get update && \
+    apt-get install -y wget apt-transport-https && \
+    wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && \
+    dpkg -i packages-microsoft-prod.deb && \
+    apt-get update && \
+    apt-get install -y dotnet-sdk-6.0 \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 ENV LC_ALL=C.UTF-8
 ENV PYTHONNET_PYDLL=/usr/lib/x86_64-linux-gnu/libpython3.8.so
@@ -65,7 +75,6 @@ RUN rm -rf /Lean/Tests/ \
            /Lean/Optimizer/ \
            /Lean/ToolBox/ \
            /Lean/VisualStudio/ \
-           /Lean/Algorithm.CSharp/ \
            /Lean/Algorithm.FSharp/ \
            /Lean/bin/ \
            /Lean/obj/ \

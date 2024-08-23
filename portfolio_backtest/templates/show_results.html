@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Backtest Results{% endblock %}
+
+{% block content %}
+    <h2>Backtest Results</h2>
+    <ul>
+        {% for result in results %}
+            <li>
+                <h3>{{ result.name }}</h3>
+                <p>Created at: {{ result.created_at }}</p>
+
+                <!-- Display result_data -->
+                <h4>Algorithm Results:</h4>
+                <ul>
+                    {% for key, value in result.result_data.items %}
+                        <li><strong>{{ key }}:</strong> {{ value }}</li>
+                    {% endfor %}
+                </ul>
+
+                <!-- Display benchmark_data -->
+                <h4>Benchmark Data:</h4>
+                <ul>
+                    {% for key, value in result.benchmark_data.items %}
+                        <li><strong>{{ key }}:</strong> {{ value }}</li>
+                    {% endfor %}
+                </ul>
+
+                <!-- Display comparison_metrics -->
+                <h4>Comparison Metrics:</h4>
+                <ul>
+                    {% for metric, data in result.comparison_metrics.items %}
+                        <li>
+                            <strong>{{ metric }}:</strong> 
+                            <ul>
+                                <li><strong>Algorithm:</strong> {{ data.Algorithm }}</li>
+                                <li><strong>Benchmark:</strong> {% if data.Benchmark == None %}N/A{% else %}{{ data.Benchmark }}{% endif %}</li>
+                                <li><strong>Difference:</strong> {% if data.Difference == None %}N/A{% else %}{{ data.Difference }}{% endif %}</li>
+                            </ul>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

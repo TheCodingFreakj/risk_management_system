@@ -1,8 +1,10 @@
 import io
+import math
 import os
 import re
 import tarfile
 from django.http import JsonResponse
+import numpy as np
 from backtest.management.commands.update_asset_data import Command as UpdateAssetDataCommand
 import docker
 def update_asset_data(request):
@@ -16,7 +18,7 @@ def update_asset_data(request):
 import json
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-from backtest.models import BacktestConfig
+from backtest.models import BacktestConfig, AlgorithmResult
 from docker.errors import DockerException
 def is_json_file_empty(file_path):
     # Check if the file exists and is not empty
@@ -215,6 +217,127 @@ def extract_statistics_dict(data_list):
                         statistics[stat_name] = stat_value
 
     return statistics
+
+def save_backtest_results(name, results):
+    result = AlgorithmResult.objects.create(
+        name=name,
+        result_data=results
+    )
+    return result.id
+
+import yfinance as yf
+import pandas as pd
+import empyrical as ep
+def download_and_benchmark(algorithm_results, benchmark_ticker, start_date, end_date):
+    # Download benchmark data
+    benchmark_data = yf.download(benchmark_ticker, start=start_date, end=end_date)['Adj Close']
+    benchmark_returns = benchmark_data.pct_change().dropna()
+    # Convert algorithm_returns to pandas Series if it's a dictionary
+    if isinstance(algorithm_results, dict):
+        algorithm_results = pd.Series(algorithm_results)
+    # Check if algorithm_returns is in the correct format (a pandas Series)
+    if isinstance(algorithm_results, dict):
+        raise ValueError("algorithm_returns should be a pandas Series, not a dict.")
+    
+    # Convert data to numeric, coercing errors to NaN
+    algorithm_results = pd.to_numeric(algorithm_results, errors='coerce')
+    benchmark_returns = pd.to_numeric(benchmark_returns, errors='coerce')
+
+    # Drop any rows with NaN values that resulted from conversion
+    algorithm_results = algorithm_results.dropna()
+    benchmark_returns = benchmark_returns.dropna()
+
+    # Calculate tracking error
+    tracking_error = np.std(algorithm_results - benchmark_returns)
+
+
+    risk_free_rate=  0.01
+    beta = ep.beta(algorithm_results, benchmark_returns)
+    portfolio_return = ep.annual_return(algorithm_results)
+    treynor_ratio = (portfolio_return - risk_free_rate) / beta
+    benchmark_metrics = {
+    'Beta': ep.beta(benchmark_returns, benchmark_returns),  # Beta of benchmark with itself should be 1
+    'Alpha': ep.alpha(benchmark_returns, benchmark_returns),  # Alpha of benchmark with itself should be 0
+    'Drawdown': ep.max_drawdown(benchmark_returns),
+    'Sharpe Ratio': ep.sharpe_ratio(benchmark_returns),
+    'Sortino Ratio': ep.sortino_ratio(benchmark_returns),
+    'Treynor Ratio': treynor_ratio,
+    'Tracking Error': tracking_error,
+    'Annual Variance': benchmark_returns.var() * 252,
+    'Annual Standard Deviation': benchmark_returns.std() * (252 ** 0.5),
+    'Compounding Annual Return': ep.annual_return(benchmark_returns),
+   
+}
+    
+    # Convert metrics to a format similar to your result_data (for easy comparison)
+    for key, value in benchmark_metrics.items():
+        if isinstance(value, float):
+            benchmark_metrics[key] = f"{value:.3f}"
+        elif isinstance(value, pd.Series):
+            benchmark_metrics[key] = value.to_dict()
+
+       
+    # Convert algorithm_results values to floats, handling strings and floats appropriately
+    algorithm_metrics_converted = {}
+    for k, v in algorithm_results.items():
+        if isinstance(v, str):
+            # Attempt to strip percentage or dollar signs, then convert to float
+            try:
+                clean_value = v.strip('%').strip('$')
+                algorithm_metrics_converted[k] = float(clean_value)
+            except ValueError:
+                # Handle the case where conversion is not possible (e.g., non-numeric strings)
+                algorithm_metrics_converted[k] = v
+        else:
+            # Directly convert if it's already a numeric type
+            algorithm_metrics_converted[k] = float(v)
+
+
+
+        # Now compare the metrics and handle NaN values
+    comparison_results = {}
+    for metric in algorithm_metrics_converted:
+        algo_value = algorithm_metrics_converted[metric]
+        bench_value = float(benchmark_metrics.get(metric, '0'))
+
+        # Check for NaN and replace with None or another placeholder
+        if math.isnan(bench_value):
+            bench_value = None  # Replace NaN with None (JSON compatible)
+        if math.isnan(algo_value):
+            algo_value = None  # Replace NaN with None (JSON compatible)
+
+        comparison_results[metric] = {
+            'Algorithm': algo_value,
+            'Benchmark': bench_value,
+            'Difference': None if algo_value is None or bench_value is None else algo_value - bench_value
+        }
+
+
+    comparison_results = clean_for_json(comparison_results)     
+
+    return comparison_results, algorithm_results, benchmark_metrics  
+# Ensure that the JSON data is valid
+def clean_for_json(data):
+    if isinstance(data, dict):
+        return {k: clean_for_json(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [clean_for_json(v) for v in data]
+    elif isinstance(data, float) and math.isnan(data):
+        return None  # Replace NaN with None (JSON compatible)
+    else:
+        return data
+def compare_benchmark_and_save(id):
+    result = get_object_or_404(AlgorithmResult, id=id) 
+     # Perform benchmarking
+    benchmark_ticker = '^GSPC'  # Example: S&P 500
+    start_date = '2020-01-01'
+    end_date = '2021-01-01'
+    comparison_results, algorithm_results, benchmark_metrics  = download_and_benchmark(result.result_data, benchmark_ticker, start_date, end_date)
+    
+    # Save the benchmark data and metrics back to the database
+    result.benchmark_data = benchmark_metrics
+    result.comparison_metrics = comparison_results
+    result.save()
 @csrf_exempt
 def run_backtest(request, backtest_id):
     # Generate the config file
@@ -234,8 +357,28 @@ def run_backtest(request, backtest_id):
                 res = extract_statistics_dict(result)
                 print(f"res ---------> {res}")
                  # If result is a dict, return it as JsonResponse
-                if isinstance(result, dict):
-                    return JsonResponse(res)
+                if isinstance(res, dict):
+                    resultId = save_backtest_results("BacktestingAlgorithm", res)
+                    compare_benchmark_and_save(resultId)
+                    queryset = AlgorithmResult.objects.filter(id=resultId)
+                    resultFinal = None
+                    # If you want to get the single object from the QuerySet
+                    if queryset.exists():
+                        resultFinal = queryset.first()  # Or queryset[0] to get the first result
+                    else:
+                        resultFinal = None  # Handle the case where no result is found
+
+                            # Create a dictionary to represent the object
+                    data = {
+                        'name': resultFinal.name,
+                        'result_data': resultFinal.result_data,
+                        'benchmark_data': resultFinal.benchmark_data,
+                        'comparison_metrics': resultFinal.comparison_metrics,
+                        'created_at': resultFinal.created_at.isoformat(),  # Ensure datetime is JSON serializable
+                    }
+                    
+    
+                    return JsonResponse(data,safe=False)
                 
                 # If result is not a dict, use safe=False
                 return JsonResponse(res, safe=False)
@@ -286,3 +429,24 @@ def run_backtest_and_filter_logs(config_path):
     return "\n".join(messages_logs_filtered)
 
 
+from django.shortcuts import render
+
+def index(request):
+    
+     # Query the database to get the required fields
+    configs = BacktestConfig.objects.all().values('id', 'rebalancing_frequency', 'weighting_scheme', 'portfolio_id')
+    
+    # Pass the query results to the template
+    context = {
+        'configs': configs,
+        'message': 'Hello, this is your first Django template!',
+    }
+    
+    return render(request, 'backtest/index.html', context)
+
+def show_results(request):
+    # Retrieve all BacktestAlgorithmResult objects
+    results = AlgorithmResult.objects.all()
+
+    # Pass the results to the template
+    return render(request, 'show_results.html', {'results': results})

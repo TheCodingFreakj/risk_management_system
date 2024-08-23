@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backtest Configurations</title>
+    <style>
+        /* Basic styles for the modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+ /* Table styles inside the modal */
+ .modal-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    .modal-content th, .modal-content td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .modal-content th {
+        background-color: #4CAF50;
+        color: white;
+    }
+
+    .modal-content tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    .modal-content tr:hover {
+        background-color: #ddd;
+    }
+
+    .modal-content h2, .modal-content h3 {
+        color: #4CAF50;
+        border-bottom: 2px solid #4CAF50;
+        padding-bottom: 5px;
+    }
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #ddd;
+        }
+
+        /* Style for the action buttons */
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ message }}</h1>
+
+    <h2>Backtest Configurations</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Rebalancing Frequency</th>
+                <th>Weighting Scheme</th>
+                <th>Portfolio ID</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for config in configs %}
+                <tr>
+                    <td>{{ config.rebalancing_frequency }}</td>
+                    <td>{{ config.weighting_scheme }}</td>
+                    <td>{{ config.portfolio_id }}</td>
+                    <td>
+                        <form class="run-backtest-form" action="{% url 'runbacktest' config.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit">Run Portfolio Backtesting For Strategy</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Modal -->
+    <div id="resultsModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modal-body">
+                <!-- Results will be loaded here as a table -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Get the modal
+            var modal = document.getElementById("resultsModal");
+    
+            // Get the <span> element that closes the modal
+            var span = document.getElementsByClassName("close")[0];
+    
+            // When the user clicks on <span> (x), close the modal
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
+    
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+    
+            // Function to convert JSON data into HTML tables
+            function formatResults(data) {
+                let resultHTML = `
+                    <h2>${data.name}</h2>
+                    <p><strong>Created At:</strong> ${data.created_at}</p>
+                    
+                    <h3>Algorithm Results</h3>
+                    <table>
+                        <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(data.result_data).map(([key, value]) => `
+                                <tr><td>${key}</td><td>${value}</td></tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <h3>Benchmark Data</h3>
+                    <table>
+                        <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(data.benchmark_data).map(([key, value]) => `
+                                <tr><td>${key}</td><td>${value}</td></tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+    
+                    <h3>Comparison Metrics</h3>
+                    <table>
+                        <thead><tr><th>Metric</th><th>Algorithm</th><th>Benchmark</th><th>Difference</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(data.comparison_metrics).map(([metric, values]) => `
+                                <tr>
+                                    <td>${metric}</td>
+                                    <td>${values.Algorithm}</td>
+                                    <td>${values.Benchmark === null ? 'N/A' : values.Benchmark}</td>
+                                    <td>${values.Difference === null ? 'N/A' : values.Difference}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                return resultHTML;
+            }
+    
+            // Handle form submission
+            document.querySelectorAll('.run-backtest-form').forEach(function(form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();  // Prevent the form from submitting normally
+    
+                    // Get the action URL from the form's action attribute
+                    var url = form.action;
+    
+                    // Send the POST request via Fetch API
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+                        }
+                    }).then(response => response.json())
+                      .then(data => {
+                          // Display the modal and load the result data into the modal body
+                          document.getElementById('modal-body').innerHTML = formatResults(data);
+                          modal.style.display = "block";
+                      })
+                      .catch(error => console.log('Error:', error));
+                });
+            });
+        });
+    </script>
+    
+</body>
+</html>

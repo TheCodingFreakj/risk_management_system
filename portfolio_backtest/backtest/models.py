@@ -28,3 +28,11 @@ class BacktestConfig(models.Model):
     def __str__(self):
         return f"{self.portfolio.name} - {self.weighting_scheme}"
 
+
+
+class AlgorithmResult(models.Model):
+    name = models.CharField(max_length=100)
+    result_data = models.JSONField()  # Store algorithm result as JSON
+    benchmark_data = models.JSONField(null=True, blank=True)  # Store benchmark data as JSON
+    comparison_metrics = models.JSONField(null=True, blank=True)  # Store metrics like Sharpe Ratio, Alpha, etc.
+    created_at = models.DateTimeField(auto_now_add=True)
